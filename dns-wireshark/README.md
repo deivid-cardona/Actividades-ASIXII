@@ -1,8 +1,4 @@
-# Seguridad en el DNS
 
-- Módulo en el panel: Alina.
-- Enunciado de referencia: ACT2-DNS-Wireshark-1.docx, Seguridad en el DNS.
-- Estado: estructura inicial; pruebas y resultados pendientes de documentar.
 
 ## Índice
 
