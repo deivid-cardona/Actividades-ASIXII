@@ -4,6 +4,16 @@
 - Enunciado de referencia: ACT2-DNS-Wireshark-1.docx, Seguridad en el DNS.
 - Estado: estructura inicial; pruebas y resultados pendientes de documentar.
 
+## Índice
+
+1. [Objetivo](#1-objetivo)
+2. [Escenario requerido](#2-escenario-requerido)
+3. [Consultas DNS y análisis con Wireshark](#3-consultas-dns-y-análisis-con-wireshark)
+4. [Diagrama del recorrido DNS](#4-diagrama-del-recorrido-dns)
+5. [DNS sobre HTTPS](#5-dns-sobre-https)
+6. [Evidencias y conclusiones](#6-evidencias-y-conclusiones)
+7. [Entrega](#7-entrega)
+
 ## 1. Objetivo
 
 Analizar e implementar la seguridad en el servicio DNS, observando el tráfico con Wireshark y comparando las consultas DNS convencionales con las realizadas mediante DNS sobre HTTPS.
