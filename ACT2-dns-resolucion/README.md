@@ -1,4 +1,4 @@
-# Actividad 2 — Resolución DNS
+# Actividad 2 — DNS+Wireshark
 
 ## Índice
 
