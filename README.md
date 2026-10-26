@@ -13,7 +13,7 @@ Repositorio de prácticas del ciclo formativo ASIXII.
 | ACT5 | Quim | Instalación y configuración de OpenLDAP | [Ver práctica](./ACT5-openldap/) |
 | ACT6 |RSYNC - TAR | Copias de seguridad locales y remotas, restauración y automatización | [Ver boceto](./rsync-tar/README.md) |
 | ACT7 | Ciber Hacking | Retos de mínimo privilegio en Linux | [Ver práctica](https://github.com/deivid-cardona/Ciber-Hacking/tree/main/ACT1-retos-minimo-privilegio-linux) |
-| ACT8 | Alina | Seguridad en el DNS | [Ver práctica](./dns-wireshark/) |
+| ACT8 | Alina | DNS+Wireshark| [Ver práctica](./dns-wireshark/) |
 
 Cada actividad incluye su código, capturas y documentación en su propia carpeta.
 
