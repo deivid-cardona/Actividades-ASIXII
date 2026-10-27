@@ -1,8 +1,4 @@
-# Securización de servidores DNS con DNSSEC
 
-- Módulo: Alina.
-- Carpeta: dnssec.
-- Estado: documentación inicial; implementación y pruebas pendientes de documentar.
 
 ## Índice
 
