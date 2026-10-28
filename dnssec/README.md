@@ -166,11 +166,7 @@ La reconfiguración no mostró errores. A continuación consulté la zona direct
 
 ## 6. Comprobación de la zona directa firmada
 
-Desde la terminal del principal ejecuté:
-
-```bash
-dig @192.168.6.100 deivid.test SOA +dnssec +multiline
-```
+Desde la terminal del principal consulté el registro SOA de `deivid.test` solicitando información DNSSEC.
 
 ![Respuesta del SOA firmado de deivid.test](evidencias/03-soa-firmado-master.png)
 
@@ -194,12 +190,7 @@ Esta respuesta demuestra la publicación del registro firmado, pero no constituy
 
 ## 7. Comprobación del secundario
 
-Después de configurar DNSSEC en el principal, comprobé que el servidor secundario había recibido y servía correctamente las zonas firmadas. Para ello utilicé el secundario `192.168.6.101` y solicité el registro SOA de la zona directa y de la zona inversa con la opción `+dnssec`.
-
-```bash
-dig @192.168.6.101 deivid.test SOA +dnssec
-dig @192.168.6.101 6.168.192.in-addr.arpa SOA +dnssec
-```
+Después de configurar DNSSEC en el principal, comprobé que el servidor secundario había recibido y servía correctamente las zonas firmadas. Para ello consulté el registro SOA de la zona directa y de la zona inversa al secundario `192.168.6.101`, solicitando información DNSSEC.
 
 ![SOA firmado en el secundario para la zona directa](evidencias/04-soa-firmado-secundario-directa.png)
 
@@ -209,12 +200,7 @@ En esta captura se observa la respuesta del secundario para `deivid.test`. El se
 
 En esta segunda captura compruebo la zona inversa `6.168.192.in-addr.arpa`. También aparece el `RRSIG SOA`, por lo que el secundario está publicando la firma correspondiente además del registro SOA.
 
-Para confirmar que el secundario estaba sincronizado con el principal, consulté después el serial de ambas zonas directamente al servidor principal:
-
-```bash
-dig @192.168.6.100 deivid.test SOA +short
-dig @192.168.6.100 6.168.192.in-addr.arpa SOA +short
-```
+Para confirmar que el secundario estaba sincronizado con el principal, consulté después el serial de ambas zonas directamente al servidor principal `192.168.6.100`.
 
 ![Comparación de seriales entre el principal y el secundario](evidencias/06-comparacion-seriales-master.jpg)
 
