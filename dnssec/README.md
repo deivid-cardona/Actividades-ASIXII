@@ -9,6 +9,7 @@
 5. [Configuración de DNSSEC en el servidor principal](#5-configuración-de-dnssec-en-el-servidor-principal)
 6. [Comprobación de la zona directa firmada](#6-comprobación-de-la-zona-directa-firmada)
 7. [Comprobación del secundario](#7-comprobación-del-secundario)
+8. [Pruebas desde el cliente Windows](#8-pruebas-desde-el-cliente-windows)
 
 ## 1. Introducción
 
@@ -172,3 +173,39 @@ Para confirmar que el secundario estaba sincronizado con el principal, consulté
 En esta captura se ven las dos consultas realizadas al principal. Ambas zonas devuelven el serial `4`, el mismo valor que había obtenido al consultar el secundario. Esto indica que la transferencia de zona se ha completado y que el secundario dispone de la versión actual de las zonas directa e inversa.
 
 En conjunto, estas comprobaciones demuestran que el secundario no solo recibe las zonas, sino que también sirve sus registros SOA junto con las firmas DNSSEC. La coincidencia de seriales entre `192.168.6.100` y `192.168.6.101` confirma que ambas zonas están sincronizadas y firmadas en los dos servidores.
+
+## 8. Pruebas desde el cliente Windows
+
+### 8.1 Conectividad del laboratorio
+
+Para consultar los servidores desde mi equipo Windows, conecté el adaptador 2 de ambas máquinas virtuales a la misma red solo-anfitrión de VirtualBox. Configuré el adaptador del anfitrión con `192.168.6.1/24`, desactivé su servidor DHCP y conservé las direcciones `192.168.6.100` y `192.168.6.101` de los servidores. Después comprobé la comunicación mediante ping: ambos respondieron sin pérdida de paquetes.
+
+Realicé las consultas desde PowerShell con `Resolve-DnsName`, indicando cada servidor mediante `-Server` y solicitando información DNSSEC con `-DnssecOk`. No necesité cambiar el DNS de la tarjeta física de Windows. Los comandos y sus salidas se muestran en las capturas, sin duplicarlos en bloques de código.
+
+### 8.2 SOA de la zona directa
+
+![Consultas del SOA de la zona directa desde Windows a ambos servidores](evidencias/07-cliente-windows-soa-directa.png)
+
+Consulté el SOA de `deivid.test` al principal y al secundario. Ambos devolvieron el serial `4` y un `RRSIG SOA` con algoritmo `13` y firmante `deivid.test`. Los campos de la firma mostrados en las dos respuestas coincidieron. Esta prueba comprueba que Windows recibe el SOA acompañado de su firma desde ambos servidores.
+
+### 8.3 SOA de la zona inversa
+
+![Consultas del SOA de la zona inversa desde Windows a ambos servidores](evidencias/08-cliente-windows-soa-inversa.png)
+
+Repetí la consulta para `6.168.192.in-addr.arpa`. Los dos servidores respondieron con el serial `4` y un `RRSIG SOA`, firmado por la propia zona inversa con algoritmo `13`. Así comprobé desde Windows que la publicación del SOA firmado funciona también para esta zona.
+
+### 8.4 Resolución directa e inversa en el principal
+
+![Consultas A y PTR desde Windows al principal](evidencias/09-cliente-windows-a-ptr-master.png)
+
+Al consultar el principal `192.168.6.100`, obtuve el registro A de `ns1.deivid.test` con la dirección `192.168.6.100`, acompañado de `RRSIG A`. En la consulta inversa de `100.6.168.192.in-addr.arpa`, recibí el PTR que apunta a `ns1.deivid.test`, acompañado de `RRSIG PTR`. Las respuestas relacionan correctamente el nombre del servidor con su dirección en ambos sentidos.
+
+### 8.5 Resolución directa e inversa en el secundario
+
+![Consultas A y PTR desde Windows al secundario](evidencias/10-cliente-windows-a-ptr-secundario.png)
+
+Repetí las consultas al secundario `192.168.6.101` y obtuve los mismos valores A y PTR. Los campos de firma mostrados para cada registro también coincidieron con los del principal. Con ello comprobé que el secundario ofrece al cliente Windows la resolución directa e inversa junto con las firmas correspondientes.
+
+### 8.6 Alcance de las pruebas
+
+Estas pruebas demuestran la resolución desde Windows y la recepción de registros SOA, A y PTR acompañados de sus RRSIG en ambos servidores. No las interpreto como una validación criptográfica de confianza: solicitar información DNSSEC y recibir las firmas no demuestra por sí solo que se hayan validado contra un ancla de confianza.
