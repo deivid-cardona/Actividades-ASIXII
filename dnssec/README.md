@@ -108,48 +108,13 @@ sudo cp -p /etc/bind/zones/db.6.168.192 /var/lib/bind/dnssec/
 sudo chown bind:bind /var/lib/bind/dnssec/db.deivid.test /var/lib/bind/dnssec/db.6.168.192
 ```
 
-Comprobé el directorio y sus archivos con:
-
-```bash
-sudo ls -ld /var/lib/bind/dnssec
-sudo ls -l /var/lib/bind/dnssec/db.*
-```
-
 ![Directorio y archivos de las zonas DNSSEC](evidencias/02-directorio-zonas-dnssec.png)
 
 En esta captura muestro el directorio de trabajo y los archivos de zona. Preparé la carpeta con permisos `750` y asigné las copias a `bind:bind` para que BIND pudiera trabajar con ellas. Esta evidencia corresponde a la preparación del almacenamiento; la comprobación de las respuestas firmadas aparece en el apartado 6.
 
 ## 5. Configuración de DNSSEC en el servidor principal
 
-Edité `/etc/bind/named.conf.local` para utilizar las copias de las zonas y configurar la firma automática:
-
-```bash
-sudo nano /etc/bind/named.conf.local
-```
-
-La configuración quedó así:
-
-```conf
-zone "deivid.test" {
-    type master;
-    file "/var/lib/bind/dnssec/db.deivid.test";
-    key-directory "/var/lib/bind/dnssec";
-    allow-transfer { 192.168.6.101; };
-
-    dnssec-policy default;
-    inline-signing yes;
-};
-
-zone "6.168.192.in-addr.arpa" {
-    type master;
-    file "/var/lib/bind/dnssec/db.6.168.192";
-    key-directory "/var/lib/bind/dnssec";
-    allow-transfer { 192.168.6.101; };
-
-    dnssec-policy default;
-    inline-signing yes;
-};
-```
+Edité `/etc/bind/named.conf.local` para utilizar las copias de las zonas y configurar la firma automática.
 
 ![Configuración de las zonas con DNSSEC en el principal](evidencias/01-configuracion-dnssec-master.png)
 
