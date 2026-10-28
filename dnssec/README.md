@@ -10,6 +10,8 @@
 6. [Comprobación de la zona directa firmada](#6-comprobación-de-la-zona-directa-firmada)
 7. [Comprobación del secundario](#7-comprobación-del-secundario)
 8. [Pruebas desde el cliente Windows](#8-pruebas-desde-el-cliente-windows)
+9. [Consideraciones de seguridad](#9-consideraciones-de-seguridad)
+10. [Conclusión general](#10-conclusión-general)
 
 ## 1. Introducción
 
@@ -23,7 +25,7 @@ En este documento recojo los comandos que he utilizado, los cambios de configura
 - Implementar DNSSEC en las zonas del laboratorio.
 - Comprobar el funcionamiento del servidor principal y del secundario tras los cambios.
 - Realizar pruebas desde el cliente y explicar sus resultados.
-- Analizar el consumo de recursos, la rotación de claves y la caducidad de las firmas según el enunciado.
+- Considerar el consumo de recursos y los riesgos asociados a la rotación de claves y la caducidad de las firmas.
 
 ## 3. Topología y escenario de partida
 
@@ -209,3 +211,15 @@ Repetí las consultas al secundario `192.168.6.101` y obtuve los mismos valores 
 ### 8.6 Alcance de las pruebas
 
 Estas pruebas demuestran la resolución desde Windows y la recepción de registros SOA, A y PTR acompañados de sus RRSIG en ambos servidores. No las interpreto como una validación criptográfica de confianza: solicitar información DNSSEC y recibir las firmas no demuestra por sí solo que se hayan validado contra un ancla de confianza.
+
+## 9. Consideraciones de seguridad
+
+Durante esta práctica he tenido en cuenta que DNSSEC aporta autenticidad e integridad a los datos DNS mediante firmas digitales, pero no cifra las consultas ni las respuestas. La firma y la validación pueden aumentar el consumo de CPU y memoria, aunque no he medido ese impacto en este laboratorio. También he considerado que una gestión incorrecta de la rotación de claves o la expiración de las firmas RRSIG puede provocar fallos de resolución cuando las respuestas se validan. Por ello, he utilizado la gestión automática de BIND mediante `dnssec-policy default` e `inline-signing yes`. En las pruebas realizadas desde Windows he comprobado la recepción de registros acompañados de sus firmas desde el máster y el secundario; estas pruebas no demuestran por sí solas una validación criptográfica de confianza.
+
+## 10. Conclusión general
+
+En esta actividad he implementado DNSSEC en las zonas directa `deivid.test` e inversa `6.168.192.in-addr.arpa` de mi laboratorio con BIND9. He configurado la firma automática en el servidor principal y he comprobado que el secundario sirve los registros acompañados de sus firmas y anuncia el mismo serial de zona que el máster.
+
+Desde el cliente Windows he realizado consultas a ambos servidores y he obtenido los registros SOA, A y PTR junto con sus correspondientes RRSIG. Estas pruebas muestran que la resolución directa e inversa funciona desde el cliente y que ambos servidores publican las respuestas firmadas. No obstante, la recepción de las firmas no demuestra por sí sola una validación criptográfica de confianza.
+
+El proceso queda documentado con la configuración utilizada, las comprobaciones realizadas y las capturas explicadas en el repositorio de GitHub. Con ello he cubierto la implementación y las pruebas solicitadas, distinguiendo la firma de los datos DNS del cifrado del transporte y teniendo en cuenta los riesgos asociados a la gestión de claves y la caducidad de las firmas.
