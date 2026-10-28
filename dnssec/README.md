@@ -8,6 +8,7 @@
 4. [Preparación del entorno](#4-preparación-del-entorno)
 5. [Configuración de DNSSEC en el servidor principal](#5-configuración-de-dnssec-en-el-servidor-principal)
 6. [Comprobación de la zona directa firmada](#6-comprobación-de-la-zona-directa-firmada)
+7. [Comprobación del secundario](#7-comprobación-del-secundario)
 
 ## 1. Introducción
 
@@ -190,3 +191,33 @@ En la primera salida obtenida comprobé estos datos:
 El registro `SOA` apareció acompañado de un `RRSIG SOA`. Con esta prueba comprobé que el principal sirve el SOA de la zona directa junto con su firma. El serial obtenido fue `3`, mientras que en la comprobación inicial había recibido `1`.
 
 Esta respuesta demuestra la publicación del registro firmado, pero no constituye por sí sola una comprobación de validación de confianza desde el cliente. El indicador `aa` identifica la respuesta como autoritativa; no lo interpreto como una prueba de validación DNSSEC.
+
+## 7. Comprobación del secundario
+
+Después de configurar DNSSEC en el principal, comprobé que el servidor secundario había recibido y servía correctamente las zonas firmadas. Para ello utilicé el secundario `192.168.6.101` y solicité el registro SOA de la zona directa y de la zona inversa con la opción `+dnssec`.
+
+```bash
+dig @192.168.6.101 deivid.test SOA +dnssec
+dig @192.168.6.101 6.168.192.in-addr.arpa SOA +dnssec
+```
+
+![SOA firmado en el secundario para la zona directa](evidencias/04-soa-firmado-secundario-directa.png)
+
+En esta captura se observa la respuesta del secundario para `deivid.test`. El servidor devuelve el registro `SOA` acompañado de un registro `RRSIG SOA`, lo que indica que la zona directa se está sirviendo con DNSSEC desde `dns2`.
+
+![SOA firmado en el secundario para la zona inversa](evidencias/05-soa-firmado-secundario-inversa.png)
+
+En esta segunda captura compruebo la zona inversa `6.168.192.in-addr.arpa`. También aparece el `RRSIG SOA`, por lo que el secundario está publicando la firma correspondiente además del registro SOA.
+
+Para confirmar que el secundario estaba sincronizado con el principal, consulté después el serial de ambas zonas directamente al servidor principal:
+
+```bash
+dig @192.168.6.100 deivid.test SOA +short
+dig @192.168.6.100 6.168.192.in-addr.arpa SOA +short
+```
+
+![Comparación de seriales entre el principal y el secundario](evidencias/06-comparacion-seriales-master.jpg)
+
+En esta captura se ven las dos consultas realizadas al principal. Ambas zonas devuelven el serial `4`, el mismo valor que había obtenido al consultar el secundario. Esto indica que la transferencia de zona se ha completado y que el secundario dispone de la versión actual de las zonas directa e inversa.
+
+En conjunto, estas comprobaciones demuestran que el secundario no solo recibe las zonas, sino que también sirve sus registros SOA junto con las firmas DNSSEC. La coincidencia de seriales entre `192.168.6.100` y `192.168.6.101` confirma que ambas zonas están sincronizadas y firmadas en los dos servidores.
