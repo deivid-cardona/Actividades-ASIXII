@@ -72,9 +72,15 @@ He creado la tabla act8_nat y una cadena postrouting con una regla de enmascaram
 
 Los contadores de la regla muestran 0 paquetes y 0 bytes en la salida que he obtenido. Por tanto, he comprobado que la regla está cargada, pero todavía no he demostrado que el cliente la utilice ni que tenga salida a Internet.
 
-Todavía tengo pendiente confirmar el guardado de las reglas en /etc/nftables.conf y la habilitación del servicio para cargarlas al arrancar. No doy por persistente el NAT hasta verificar ese paso.
+### 3.6 Configuración de la persistencia del NAT
 
-### 3.6 Mi estado de avance
+![Archivo de reglas NAT y habilitación del servicio nftables](evidencias/04-persistencia-nat-deivid.png)
+
+He guardado una copia del archivo anterior y he almacenado las reglas en /etc/nftables.conf. He validado el archivo sin obtener errores de sintaxis y he habilitado el servicio nftables para que cargue la configuración al arrancar.
+
+En la comprobación final muestro el archivo con la tabla act8_nat y su regla de enmascaramiento, junto con el resultado enabled del servicio. He dejado configurada la persistencia del NAT, aunque todavía no he comprobado la carga de las reglas después de reiniciar. Esta evidencia tampoco demuestra por sí sola que el cliente tenga acceso a Internet.
+
+### 3.7 Mi estado de avance
 
 | Elemento | Estado de mi trabajo |
 |---|---|
@@ -84,18 +90,18 @@ Todavía tengo pendiente confirmar el guardado de las reglas en /etc/nftables.co
 | Interfaces y rutas del servidor | He identificado enp0s3 como salida y enp0s8 como red interna |
 | Reenvío IPv4 | He activado el ajuste y he comprobado el valor 1 |
 | NAT | He cargado y listado la regla; todavía no he probado tráfico del cliente |
-| Persistencia del NAT | Todavía no he confirmado el guardado y la habilitación al arranque |
+| Persistencia del NAT | He guardado y validado el archivo y he habilitado el servicio; todavía no he comprobado la carga tras reiniciar |
 | DNS con reenviador | He revisado la configuración existente; todavía no he probado la resolución externa |
 | DHCP | Todavía no lo he preparado ni probado |
 | Adaptación de dns2 y salida a Internet | Todavía no las he completado ni verificado |
 | Navegador, Wireshark y pruebas DNS/DoH | Todavía no los he preparado y probado para esta actividad |
 
-### 3.7 Mis siguientes pasos
+### 3.8 Mis siguientes pasos
 
-1. Confirmaré la persistencia de las reglas NAT.
-2. Prepararé DHCP en el servidor y adaptaré dns2 para recibir la configuración necesaria.
-3. Comprobaré el DNS que utiliza dns2 y evitaré que su antigua configuración como secundario interfiera en las pruebas.
-4. Verificaré la conectividad, la resolución externa y la salida a Internet desde el cliente.
+1. Prepararé DHCP en el servidor y adaptaré dns2 para recibir la configuración necesaria.
+2. Comprobaré el DNS que utiliza dns2 y evitaré que su antigua configuración como secundario interfiera en las pruebas.
+3. Verificaré la conectividad, la resolución externa y la salida a Internet desde el cliente.
+4. Comprobaré la carga de las reglas después de reiniciar cuando realice la verificación de persistencia.
 5. Realizaré las capturas DNS y DoH e incorporaré sus resultados.
 
 ## 4. Consultas DNS y análisis con Wireshark
@@ -130,15 +136,16 @@ Todavía no he configurado DoH ni he realizado las capturas y la comparación.
 
 ## 7. Evidencias y conclusiones
 
-He incorporado mis tres primeras capturas en evidencias/, junto con la explicación de la configuración realizada. Mantendré este formato para las siguientes pruebas: imagen y explicación en primera persona, sin duplicar los comandos que ya se lean en la captura.
+He incorporado mis cuatro primeras capturas en evidencias/, junto con la explicación de la configuración realizada. Mantendré este formato para las siguientes pruebas: imagen y explicación en primera persona, sin duplicar los comandos que ya se lean en la captura.
 
 | Evidencia | Archivo |
 |---|---|
 | Red interna del servidor | [01-red-interna-deivid.png](evidencias/01-red-interna-deivid.png) |
 | Red interna del cliente | [02-red-interna-dns2.png](evidencias/02-red-interna-dns2.png) |
 | Reenvío IPv4 y NAT del servidor | [03-reenvio-nat-deivid.png](evidencias/03-reenvio-nat-deivid.png) |
+| Archivo de reglas y habilitación al arranque | [04-persistencia-nat-deivid.png](evidencias/04-persistencia-nat-deivid.png) |
 
-He preparado la conexión de las máquinas y he activado el reenvío y el NAT del servidor. Este avance todavía no demuestra el funcionamiento completo del escenario: me falta preparar DHCP y comprobar la resolución y el acceso a Internet desde dns2.
+He preparado la conexión de las máquinas, he activado el reenvío y el NAT del servidor y he configurado el guardado de las reglas y su carga al arrancar. Este avance todavía no demuestra el funcionamiento completo del escenario: me falta preparar DHCP, comprobar la resolución y el acceso a Internet desde dns2 y verificar la carga de las reglas tras reiniciar.
 
 Mantendré separadas mi actividad anterior ACT2-dns-resolucion/ y mi documentación DNSSEC de dnssec/. Redactaré mis conclusiones finales cuando haya completado y verificado las pruebas DNS y DoH.
 
