@@ -174,3 +174,7 @@ Todas las capturas se guardan en `evidencias/`.
 | 14 | Puertos UDP en Wireshark | [Ver captura](evidencias/14-wireshark-udp-ports.png) |
 | 15 | ID de transacción y flags DNS en Wireshark | [Ver captura](evidencias/15-wireshark-transaction-id-flags.png) |
 | 16 | Registros MX de la respuesta en Wireshark | [Ver captura](evidencias/16-wireshark-mx-answers.png) |
+
+---
+
+[← Volver al panel de actividades](../README.md#actividades)

@@ -88,3 +88,7 @@ Todas las capturas se guardan en `evidencias/`.
 | 1 | Petición enviada desde el cliente | [Ver captura](evidencias/cliente_peticion.jpg) |
 | 2 | Petición recibida en el servidor | [Ver captura](evidencias/server.peticion.jpg) |
 | 3 | Análisis de la comunicación DNS con Wireshark | [Ver captura](evidencias/wireshark.jpg) |
+
+---
+
+[← Volver al panel de actividades](../README.md#actividades)
