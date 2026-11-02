@@ -15,6 +15,7 @@ Repositorio de prácticas del ciclo formativo ASIXII.
 | ACT7 | Ciber Hacking | Retos de mínimo privilegio en Linux | [Ver práctica](https://github.com/deivid-cardona/Ciber-Hacking/tree/main/ACT1-retos-minimo-privilegio-linux) |
 | ACT8 | Alina | DNS+Wireshark| [Ver práctica](./dns-wireshark/) |
 | ACT9 | Alina | Securización de servidores DNS con DNSSEC | [Ver práctica](./dnssec/) |
+| ACT10 | Quim | Manual de operaciones: FusionDirectory, OpenLDAP y NFS | [Ver estructura del manual](./ACT10-fusiondirectory-nfs/) |
 
 Cada actividad incluye su código, capturas y documentación en su propia carpeta.
 
