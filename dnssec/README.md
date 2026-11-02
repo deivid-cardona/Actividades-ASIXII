@@ -223,3 +223,7 @@ En esta actividad he implementado DNSSEC en las zonas directa `deivid.test` e in
 Desde el cliente Windows he realizado consultas a ambos servidores y he obtenido los registros SOA, A y PTR junto con sus correspondientes RRSIG. Estas pruebas muestran que la resolución directa e inversa funciona desde el cliente y que ambos servidores publican las respuestas firmadas. No obstante, la recepción de las firmas no demuestra por sí sola una validación criptográfica de confianza.
 
 El proceso queda documentado con la configuración utilizada, las comprobaciones realizadas y las capturas explicadas en el repositorio de GitHub. Con ello he cubierto la implementación y las pruebas solicitadas, distinguiendo la firma de los datos DNS del cifrado del transporte y teniendo en cuenta los riesgos asociados a la gestión de claves y la caducidad de las firmas.
+
+---
+
+[← Volver al panel de actividades](../README.md#actividades)

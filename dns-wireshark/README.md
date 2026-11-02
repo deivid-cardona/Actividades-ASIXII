@@ -174,3 +174,7 @@ He preparado un laboratorio en el que Deivid proporciona servicios DNS y DHCP y 
 He identificado en Wireshark las consultas y respuestas de `www.ripe.net`, `www.isc.org` y `www.iana.org`, separándolas del tráfico adicional. He observado que los nombres y datos DNS son legibles y he documentado UDP con destino al puerto `53` en el paquete inspeccionado.
 
 He activado DNS sobre HTTPS en Firefox y he comprobado el estado mostrado para Cloudflare. He mantenido diferenciadas las evidencias del tráfico DNS convencional y la comprobación de configuración del navegador.
+
+---
+
+[← Volver al panel de actividades](../README.md#actividades)
