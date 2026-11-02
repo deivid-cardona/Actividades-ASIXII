@@ -80,7 +80,7 @@ La comprobación posterior de las interfaces devuelve:
 lo       UNKNOWN  127.0.0.1/8
 enp0s3   UP       10.0.2.15/24
 enp0s8   UP       192.168.6.101/24
-n```
+```
 
 Para instalar y habilitar BIND9, si todavía no está instalado:
 

@@ -350,3 +350,7 @@ Esta prueba no debe confundirse con una consulta de atributos ni con un inicio d
 | 5 | Consulta general del directorio LDAP | [Ver captura](evidencias/5.%20Consulta%20general%20del%20directorio%20LDAP.jpg) |
 | 6 | Consulta específica del usuario dcardona | [Ver captura](evidencias/06-consulta-usuario-dcardona.png) |
 | 7 | Autenticación LDAP del usuario dcardona | [Ver captura](evidencias/07-autenticacion-dcardona.png) |
+
+---
+
+[← Volver al panel de actividades](../README.md#actividades)
