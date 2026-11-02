@@ -320,3 +320,7 @@ Todas las capturas se guardan en `evidencias/`.
 | Resolución externa y estado del servicio BIND9 | [Ver captura](evidencias/02-resolucion-externa-y-estado-bind9.png) |
 | Entorno de la máquina virtual y configuración de red | [Ver captura](evidencias/03-entorno-vm-y-red.png) |
 | Configuración de BIND9 y archivos de zona | [Ver captura](evidencias/04-configuracion-bind9-y-zonas.png) |
+
+---
+
+[← Volver al panel de actividades](../README.md#actividades)
