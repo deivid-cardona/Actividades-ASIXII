@@ -166,16 +166,16 @@ La interfaz ha vuelto a cargar con normalidad y he podido continuar con la admin
 
 Las capturas disponibles se encuentran en [`evidencias/`](evidencias/).
 
-| Archivo | Contenido |
-|---|---|
-| `fusiondirectory-01-acceso-web.png` | Acceso inicial a la interfaz web |
-| `fusiondirectory-acceso-administrador.png` | Sesión iniciada como `fd-admin` |
-| `fusiondirectory-comprobacion-requisitos.png` | Comprobación de requisitos previos |
-| `fusiondirectory-configuracion-rama-usuarios.png` | Configuración de la rama de usuarios y grupos |
-| `fusiondirectory-grupo-soporte-creado.png` | Grupo `soporte` creado y visible |
-| `fusiondirectory-inicio-asistente.png` | Inicio del asistente de configuración |
-| `fusiondirectory-inspeccion-inicial.png` | Inspección inicial del directorio |
-| `fusiondirectory-inspeccion-tras-inicializacion.png` | Estado del directorio tras la inicialización |
+| Captura | Contenido | Enlace |
+|---|---|---|
+| Acceso inicial | Acceso inicial a la interfaz web | [Ver captura](evidencias/fusiondirectory-01-acceso-web.png) |
+| Acceso administrador | Sesión iniciada como `fd-admin` | [Ver captura](evidencias/fusiondirectory-acceso-administrador.png) |
+| Requisitos | Comprobación de requisitos previos | [Ver captura](evidencias/fusiondirectory-comprobacion-requisitos.png) |
+| Rama de usuarios | Configuración de la rama de usuarios y grupos | [Ver captura](evidencias/fusiondirectory-configuracion-rama-usuarios.png) |
+| Grupo soporte | Grupo `soporte` creado y visible | [Ver captura](evidencias/fusiondirectory-grupo-soporte-creado.png) |
+| Asistente | Inicio del asistente de configuración | [Ver captura](evidencias/fusiondirectory-inicio-asistente.png) |
+| Inspección inicial | Inspección inicial del directorio | [Ver captura](evidencias/fusiondirectory-inspeccion-inicial.png) |
+| Inspección final | Estado del directorio tras la inicialización | [Ver captura](evidencias/fusiondirectory-inspeccion-tras-inicializacion.png) |
 
 ## 6. Evidencias pendientes
 
