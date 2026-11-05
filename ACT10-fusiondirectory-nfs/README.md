@@ -9,7 +9,7 @@ He estructurado este manual procedimental para documentar la instalación, confi
 El documento se organiza en tres partes:
 
 - **Avance ejecutado:** operaciones ya realizadas y verificadas.
-- **Incidencias y resolución:** errores encontrados, diagnóstico y corrección aplicada.
+- **Despliegue mediante contenedores:** instalación de FusionDirectory y resolución de incidencias.
 - **Pendientes y evidencias futuras:** tareas restantes y espacio reservado para nuevas capturas.
 
 ## 2. Contexto del entorno
@@ -94,18 +94,106 @@ El grupo ha quedado visible en la lista junto a `desarrollo` y `usuarios`.
 
 ![Grupo soporte creado](evidencias/fusiondirectory-grupo-soporte-creado.png)
 
-## 4. Incidencias y resolución
+## 4. Despliegue de FusionDirectory mediante contenedores
 
-### 4.1. Error al guardar la configuración de plugins
+### 4.1. Arquitectura utilizada
+
+He desplegado FusionDirectory separando los servicios en contenedores Docker. De esta forma, el servidor LDAP y la interfaz web permanecen aislados, pero pueden comunicarse entre sí.
+
+| Componente | Función |
+|---|---|
+| `ladapserver` | Contenedor con OpenLDAP, donde se almacena el directorio y se cargan los esquemas |
+| Contenedor web de FusionDirectory | Contenedor con Apache, PHP y FusionDirectory, publicado en `127.0.0.1:8080` |
+| `fd-schema-source` | Contenedor que contiene los ficheros de esquema `.schema` necesarios para FusionDirectory |
+
+La interfaz web de FusionDirectory se conecta al servidor LDAP mediante:
+
+```text
+ldap://host.docker.internal:389
+```
+
+De este modo, el contenedor web puede alcanzar el puerto `389` del servicio OpenLDAP publicado por el contenedor `ladapserver` en el equipo anfitrión.
+
+### 4.2. Preparación del entorno de esquemas
+
+En el contenedor `ladapserver` he creado un directorio de trabajo para almacenar los esquemas, las configuraciones temporales y los LDIF generados:
+
+```bash
+mkdir -p /root/fd-schemas
+cd /root/fd-schemas
+```
+
+A continuación, he copiado desde el contenedor `fd-schema-source` los ficheros de esquema necesarios:
+
+```bash
+docker cp \
+  "fd-schema-source:/etc/ldap/schema/fusiondirectory/<esquema>.schema" \
+  ./<esquema>.schema
+```
+
+Este paso es necesario porque OpenLDAP no puede utilizar directamente los ficheros `.schema` de FusionDirectory en su configuración dinámica: primero deben convertirse al formato LDIF compatible con `cn=config`.
+
+### 4.3. Conversión de esquemas a LDIF
+
+Para convertir un esquema, he preparado una configuración temporal de `slapd` que incluye el fichero `.schema` correspondiente:
+
+```bash
+cp slapd.conf.test slapd.conf.<nombre>
+printf "\ninclude /root/fd-schemas/<esquema>.schema\n" \
+  >> slapd.conf.<nombre>
+```
+
+Después he utilizado `slaptest` para generar la estructura LDIF:
+
+```bash
+TMP=$(mktemp -d /root/fd-schemas/conversion.XXXXXX)
+slaptest -f "$PWD/slapd.conf.<nombre>" -F "$TMP"
+```
+
+Del resultado he extraído las definiciones de atributos y clases para construir un LDIF válido para `cn=config`:
+
+```ldif
+dn: cn=<esquema>,cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: <esquema>
+olcAttributeTypes: ...
+olcObjectClasses: ...
+```
+
+Finalmente, he cargado el esquema en la configuración dinámica de OpenLDAP:
+
+```bash
+ldapadd -Q -Y EXTERNAL -H ldapi:/// -f <esquema>.ldif
+```
+
+### 4.4. Carga de los esquemas del núcleo
+
+Antes de poder utilizar la configuración web de FusionDirectory, he cargado los esquemas base necesarios para el funcionamiento del núcleo:
+
+- `core-fd-conf.schema`
+- `template-fd-conf.schema`
+
+Estos esquemas permiten que OpenLDAP reconozca la configuración principal de FusionDirectory almacenada en:
+
+```text
+cn=config,ou=fusiondirectory,dc=hoostlock,dc=lan
+```
+
+### 4.5. Incidencia: esquemas de plugins no cargados
 
 **Síntoma**
 
-Al intentar guardar la configuración desde la pestaña `Plugins`, FusionDirectory devolvía errores LDAP de sintaxis inválida.
-
-Los mensajes incluían clases como:
+Al intentar guardar la configuración desde la pestaña **Plugins** de FusionDirectory, el servidor LDAP devolvía errores de sintaxis inválida:
 
 ```text
-fdAutofsPluginConf
+LDAP operation failed!
+Object: cn=config,ou=fusiondirectory,dc=hoostlock,dc=lan
+Error: Invalid syntax - objectClass: fdAutofsPluginConf
+```
+
+Durante las sucesivas pruebas aparecieron errores similares con otras clases:
+
+```text
 fdSystemsPluginConf
 fdWebservicePluginConf
 fdMailPluginConf
@@ -114,53 +202,35 @@ fdSudoPluginConf
 
 **Diagnóstico**
 
-El servidor OpenLDAP no reconocía las clases de configuración correspondientes a varios plugins de FusionDirectory. La imagen utilizada incluía los plugins, pero no todos sus esquemas `*-fd-conf.schema` habían sido cargados en `cn=config`.
+El error indicaba que OpenLDAP no reconocía las clases de configuración de varios plugins de FusionDirectory. La aplicación web estaba instalada, pero el servidor LDAP no disponía de los esquemas necesarios para almacenar su configuración.
 
 **Causa**
 
-Faltaban esquemas de configuración de FusionDirectory en el servidor LDAP. Los esquemas del núcleo habían sido cargados, pero no los asociados a plugins como AutoFS, Systems, Webservice, Mail y Sudo.
+La instalación de FusionDirectory incluye esquemas adicionales para cada plugin. Aunque los esquemas del núcleo habían sido cargados, no estaban cargados los ficheros `*-fd-conf.schema` correspondientes a plugins como AutoFS, Systems, Webservice, Mail y Sudo.
 
 **Corrección aplicada**
 
-He extraído los esquemas `*-fd-conf.schema` desde el contenedor de FusionDirectory, los he convertido a formato LDIF mediante `slaptest` y los he cargado en la configuración dinámica de OpenLDAP con:
+He extraído todos los esquemas de configuración disponibles desde el contenedor `fd-schema-source`:
 
 ```bash
-ldapadd -Q -Y EXTERNAL -H ldapi:/// -f <esquema>.ldif
+docker cp \
+  "fd-schema-source:/etc/ldap/schema/fusiondirectory/." \
+  ./all-fd-schemas/
 ```
 
-En lugar de añadirlos uno por uno, he preparado un procedimiento que detecta y carga todos los esquemas pendientes, evitando duplicados.
+Después he identificado los esquemas pendientes, los he convertido a LDIF y los he cargado en `cn=config`. Para evitar repeticiones, el procedimiento comprueba si ya existe un LDIF generado para cada esquema antes de procesarlo.
+
+El proceso general ha sido:
+
+1. Copiar los esquemas `*-fd-conf.schema` desde `fd-schema-source`.
+2. Generar una configuración temporal que incluya los esquemas pendientes.
+3. Convertirlos con `slaptest`.
+4. Extraer los LDIF correspondientes.
+5. Cargarlos con `ldapadd` mediante el socket local de OpenLDAP.
 
 **Resultado**
 
-Tras cargar los esquemas pendientes, el guardado de la configuración de FusionDirectory se completó correctamente.
-
-### 4.2. Página principal bloqueada tras guardar
-
-**Síntoma**
-
-Después de guardar la configuración, al pulsar `Main` la página permanecía cargando y no llegaba a mostrar el panel principal.
-
-**Diagnóstico**
-
-He comprobado que el problema no afectaba a toda la aplicación accediendo directamente a la sección de grupos:
-
-```text
-http://127.0.0.1:8080/fd/main.php?plug=38&reset=1
-```
-
-La página de grupos cargaba correctamente.
-
-**Corrección aplicada**
-
-He recargado la interfaz con una URL limpia:
-
-```text
-http://127.0.0.1:8080/fd/main.php?reset=1
-```
-
-**Resultado**
-
-La interfaz ha vuelto a cargar con normalidad y he podido continuar con la administración de grupos.
+Tras cargar los esquemas pendientes, he vuelto a la interfaz web y el guardado de la configuración de FusionDirectory se ha completado correctamente. A partir de ese momento, he podido configurar la rama de grupos POSIX y administrar los grupos del directorio.
 
 ## 5. Evidencias actuales
 
