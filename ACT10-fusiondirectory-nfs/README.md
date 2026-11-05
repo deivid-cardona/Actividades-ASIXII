@@ -4,105 +4,214 @@ Profesor: Quim.
 
 ## 1. Objetivo y organización del manual
 
-He estructurado este manual procedimental a partir del enunciado para organizar la instalación, configuración e integración de FusionDirectory sobre OpenLDAP y su vinculación con carpetas compartidas NFS restringidas por grupos del directorio.
+He estructurado este manual procedimental para documentar la instalación, configuración e integración de FusionDirectory sobre OpenLDAP y su posterior vinculación con recursos NFS restringidos mediante grupos del directorio.
 
-He separado la contextualización del caso de uso, los prerrequisitos, los tres módulos técnicos y la entrega. Esta estructura inicial no presenta instalaciones, comandos ni pruebas como ejecutados.
+El documento se organiza en tres partes:
 
-He situado el informe en Actividades-ASIXII para mantener una única versión de la documentación y facilitar su consulta desde el apartado de actividades de Quim.
+- **Avance ejecutado:** operaciones ya realizadas y verificadas.
+- **Incidencias y resolución:** errores encontrados, diagnóstico y corrección aplicada.
+- **Pendientes y evidencias futuras:** tareas restantes y espacio reservado para nuevas capturas.
 
-## 2. Contextualización del caso de uso
+## 2. Contexto del entorno
 
-### Modalidad A — Proyecto de Sistemas
+La actividad se desarrolla sobre la infraestructura previa de OpenLDAP, utilizando FusionDirectory como interfaz de administración web del directorio.
 
-Adaptaré el procedimiento a la arquitectura del proyecto: dominio, Base DN, unidades organizativas, direcciones IP, grupos departamentales y puntos de montaje NFS. Integraré el playbook como Manual de Operaciones de Identidad y Almacenamiento en la memoria oficial del proyecto en GitHub.
-
-### Modalidad B — Caso personal o alternativa DUAL
-
-Para esta modalidad utilizaré el caso solicitado en el enunciado:
-
-| Elemento | Parámetro exigido para esta modalidad |
+| Elemento | Valor utilizado |
 |---|---|
-| Base DN | `dc=sistemapropio,dc=local` |
-| Unidad organizativa de usuarios | `ou=usuarios` |
-| Grupo POSIX | `desarrollo` |
-| Usuarios de prueba | Al menos dos; incluiré un caso autorizado y otro ajeno al grupo para la segregación |
-| Recurso NFS | `/srv/nfs/desarrollo` |
-| Permisos de la carpeta | `770` |
-| Entrega | Manual genérico y reutilizable en PDF |
+| Dominio LDAP | `dc=hoostlock,dc=lan` |
+| Base DN | `dc=hoostlock,dc=lan` |
+| Rama de usuarios | `ou=usuarios` |
+| Rama de grupos POSIX | `ou=grupos` |
+| Interfaz web | `http://127.0.0.1:8080/fd/` |
+| Usuario administrador | `fd-admin` |
+| Grupos existentes | `desarrollo`, `usuarios` |
+| Grupo creado | `soporte` |
 
-Aplicaré solo los parámetros de la modalidad elegida al procedimiento ejecutado, sin mezclar los dos escenarios.
+## 3. Avance ejecutado
 
-## 3. Prerrequisitos y escenario
+### 3.1. Acceso a FusionDirectory
 
-Tomaré como referencia mi [práctica previa de OpenLDAP](../ACT5-openldap/README.md). Antes de la integración comprobaré:
+He accedido correctamente a la interfaz web de FusionDirectory con el usuario `fd-admin`.
 
-- El servicio `slapd`, la estructura base del dominio y la rama principal de administración.
-- La integración NSS mediante `nslcd` o `sssd`, tanto en el servidor como en los clientes.
-- El reconocimiento de los usuarios y grupos del directorio mediante `getent passwd` y `getent group`.
-- La existencia de usuarios y grupos de prueba para comprobar el acceso permitido y el denegado.
+La pantalla principal confirma el acceso administrativo:
 
-Documentaré la distribución y versión de cada equipo, sus funciones, direcciones IP, Base DN, unidades organizativas, grupos y rutas realmente utilizados. No daré por existente la integración NSS/SSSD únicamente por haber instalado OpenLDAP en la actividad anterior.
+```text
+Welcome System Administrator!
+Signed in: fd-admin
+```
 
-## 4. Módulo A — Gestión e instalación de FusionDirectory
+![Acceso como administrador](evidencias/fusiondirectory-acceso-administrador.png)
 
-### 4.1. Dependencias y repositorio
+### 3.2. Revisión inicial del directorio
 
-Documentaré la instalación de Apache, PHP y sus extensiones, incluidas `php-ldap` y `php-mbstring`, junto con la adición del repositorio oficial de FusionDirectory adecuado al sistema utilizado.
+Antes de modificar la configuración, he comprobado el estado inicial del árbol LDAP y la presencia de las unidades organizativas y grupos existentes.
 
-### 4.2. Gestión de esquemas
+![Inspección inicial](evidencias/fusiondirectory-inspeccion-inicial.png)
 
-Documentaré la carga de los esquemas del núcleo, incluidos `core-fd.schema` y `template-fd.schema`, y de los plugins utilizados mediante `fusiondirectory-schema-manager`. Acompañaré los comandos ejecutados con sus salidas de comprobación.
+Tras la inicialización, he verificado que el directorio quedaba accesible para la administración web.
 
-### 4.3. Asistente web de configuración
+![Inspección tras inicialización](evidencias/fusiondirectory-inspeccion-tras-inicializacion.png)
 
-Explicaré las seis etapas del asistente de `/fusiondirectory/setup` tal como aparezcan en la versión instalada. Incluiré la creación del token de seguridad, la verificación de conexión LDAP, la definición de las ramas `ou=usuarios` y `ou=grupos` y el guardado de `/etc/fusiondirectory/fusiondirectory.conf`.
+### 3.3. Configuración de la rama de grupos POSIX
 
-### 4.4. Administración visual
+He accedido a **Configuration → Plugins** y he configurado el parámetro:
 
-Describiré el alta de usuarios con perfil POSIX y de grupos desde la interfaz web. Relacionaré los usuarios creados con los grupos que utilizaré para las pruebas de acceso NFS.
+```text
+POSIX groups RDN = ou=grupos
+```
 
-## 5. Módulo B — Despliegue e integración de NFS
+Con este ajuste, FusionDirectory localiza los grupos POSIX en:
 
-### 5.1. Instalación y configuración del servidor
+```text
+ou=grupos,dc=hoostlock,dc=lan
+```
 
-Documentaré la instalación de `nfs-kernel-server` y la configuración utilizada para publicar el recurso del caso de uso.
+![Configuración de la rama de usuarios y grupos](evidencias/fusiondirectory-configuracion-rama-usuarios.png)
 
-### 5.2. Directorio compartido y permisos
+### 3.4. Verificación de grupos existentes
 
-Documentaré la creación de la carpeta compartida, la asignación del grupo LDAP y los permisos POSIX. Para la modalidad B utilizaré `/srv/nfs/desarrollo` con permisos `770`.
+Después de guardar la configuración, he accedido a **Groups and roles** y he comprobado que FusionDirectory muestra correctamente los grupos POSIX existentes:
 
-### 5.3. Acceso desde el cliente
+- `desarrollo`
+- `usuarios`
 
-Registraré la configuración de acceso y el punto de montaje utilizado en el cliente, junto con las comprobaciones de reconocimiento de usuarios y grupos necesarias para la prueba del recurso.
+Esto confirma que la ruta `ou=grupos` está correctamente asociada a la administración de grupos POSIX.
 
-## 6. Módulo C — Verificación y troubleshooting
+### 3.5. Creación del grupo `soporte`
 
-### 6.1. Comprobaciones en el servidor y los clientes
+He creado un nuevo grupo POSIX con los siguientes valores:
 
-Incorporaré los comandos realmente ejecutados, las salidas de verificación y la interpretación de los resultados de OpenLDAP, NSS/SSSD, FusionDirectory y NFS.
+| Campo | Valor |
+|---|---|
+| Base | `ou=grupos,dc=hoostlock,dc=lan` |
+| Name | `soporte` |
+| Force GID | Desactivado |
+| GID | Asignación automática |
+| Group members | Sin miembros iniciales |
+| System trust | `disabled` |
 
-### 6.2. Segregación de acceso
+El grupo ha quedado visible en la lista junto a `desarrollo` y `usuarios`.
 
-Documentaré dos pruebas diferenciadas sobre el mismo recurso:
+![Grupo soporte creado](evidencias/fusiondirectory-grupo-soporte-creado.png)
 
-1. Acceso y escritura con un usuario perteneciente al grupo LDAP autorizado.
-2. Intento de acceso con un usuario ajeno al grupo y comprobación de su bloqueo.
+## 4. Incidencias y resolución
 
-Identificaré el usuario, los grupos efectivos, el recurso, la acción y el resultado en cada prueba.
+### 4.1. Error al guardar la configuración de plugins
 
-### 6.3. Incidencias y resolución
+**Síntoma**
 
-Para las incidencias que encuentre registraré el síntoma, el diagnóstico, la causa identificada, la corrección aplicada y la comprobación posterior. No presentaré errores hipotéticos como incidencias ocurridas.
+Al intentar guardar la configuración desde la pestaña `Plugins`, FusionDirectory devolvía errores LDAP de sintaxis inválida.
 
-## 7. Criterio de documentación y evidencias
+Los mensajes incluían clases como:
 
-Redactaré el procedimiento en primera persona y acompañaré cada operación de su explicación, comandos ejecutados, ficheros de configuración comentados y capturas o salidas de verificación. Situaré cada imagen junto a la explicación correspondiente, sin duplicar la galería.
+```text
+fdAutofsPluginConf
+fdSystemsPluginConf
+fdWebservicePluginConf
+fdMailPluginConf
+fdSudoPluginConf
+```
 
-Guardaré las capturas en `evidencias/` con nombres numerados y descriptivos. No publicaré contraseñas, tokens de instalación ni credenciales presentes en ficheros de configuración.
+**Diagnóstico**
 
-## 8. Entrega y conclusiones
+El servidor OpenLDAP no reconocía las clases de configuración correspondientes a varios plugins de FusionDirectory. La imagen utilizada incluía los plugins, pero no todos sus esquemas `*-fd-conf.schema` habían sido cargados en `cn=config`.
 
-Prepararé la entrega conforme a la modalidad elegida: integración en la memoria oficial del proyecto en GitHub para la modalidad A, o manual reutilizable en PDF para la modalidad B. Redactaré las conclusiones a partir de la instalación, integración y pruebas documentadas.
+**Causa**
+
+Faltaban esquemas de configuración de FusionDirectory en el servidor LDAP. Los esquemas del núcleo habían sido cargados, pero no los asociados a plugins como AutoFS, Systems, Webservice, Mail y Sudo.
+
+**Corrección aplicada**
+
+He extraído los esquemas `*-fd-conf.schema` desde el contenedor de FusionDirectory, los he convertido a formato LDIF mediante `slaptest` y los he cargado en la configuración dinámica de OpenLDAP con:
+
+```bash
+ldapadd -Q -Y EXTERNAL -H ldapi:/// -f <esquema>.ldif
+```
+
+En lugar de añadirlos uno por uno, he preparado un procedimiento que detecta y carga todos los esquemas pendientes, evitando duplicados.
+
+**Resultado**
+
+Tras cargar los esquemas pendientes, el guardado de la configuración de FusionDirectory se completó correctamente.
+
+### 4.2. Página principal bloqueada tras guardar
+
+**Síntoma**
+
+Después de guardar la configuración, al pulsar `Main` la página permanecía cargando y no llegaba a mostrar el panel principal.
+
+**Diagnóstico**
+
+He comprobado que el problema no afectaba a toda la aplicación accediendo directamente a la sección de grupos:
+
+```text
+http://127.0.0.1:8080/fd/main.php?plug=38&reset=1
+```
+
+La página de grupos cargaba correctamente.
+
+**Corrección aplicada**
+
+He recargado la interfaz con una URL limpia:
+
+```text
+http://127.0.0.1:8080/fd/main.php?reset=1
+```
+
+**Resultado**
+
+La interfaz ha vuelto a cargar con normalidad y he podido continuar con la administración de grupos.
+
+## 5. Evidencias actuales
+
+Las capturas disponibles se encuentran en [`evidencias/`](evidencias/).
+
+| Archivo | Contenido |
+|---|---|
+| `fusiondirectory-01-acceso-web.png` | Acceso inicial a la interfaz web |
+| `fusiondirectory-acceso-administrador.png` | Sesión iniciada como `fd-admin` |
+| `fusiondirectory-comprobacion-requisitos.png` | Comprobación de requisitos previos |
+| `fusiondirectory-configuracion-rama-usuarios.png` | Configuración de la rama de usuarios y grupos |
+| `fusiondirectory-grupo-soporte-creado.png` | Grupo `soporte` creado y visible |
+| `fusiondirectory-inicio-asistente.png` | Inicio del asistente de configuración |
+| `fusiondirectory-inspeccion-inicial.png` | Inspección inicial del directorio |
+| `fusiondirectory-inspeccion-tras-inicializacion.png` | Estado del directorio tras la inicialización |
+
+## 6. Evidencias pendientes
+
+Este apartado queda reservado para las capturas y salidas que se añadirán en las siguientes fases de la actividad.
+
+### 6.1. NFS
+
+- Instalación y configuración del servidor NFS.
+- Creación del recurso compartido.
+- Asignación de permisos POSIX al grupo autorizado.
+- Configuración del cliente.
+- Montaje del recurso NFS.
+
+### 6.2. Verificación de acceso
+
+- Reconocimiento de usuarios y grupos mediante `getent`.
+- Acceso permitido con un usuario miembro del grupo autorizado.
+- Acceso denegado con un usuario ajeno al grupo.
+- Comprobación de escritura dentro del recurso compartido.
+
+### 6.3. Comprobaciones finales
+
+- Estado de los servicios OpenLDAP, NSS/SSSD y NFS.
+- Configuración final del recurso compartido.
+- Resumen de pruebas de segregación de acceso.
+
+Las nuevas imágenes se añadirán en `evidencias/` con nombres descriptivos y se insertarán junto a la explicación correspondiente.
+
+## 7. Próximos pasos
+
+1. Documentar el despliegue del servidor NFS.
+2. Crear y configurar el recurso compartido.
+3. Asignar permisos mediante un grupo LDAP.
+4. Configurar el cliente y montar el recurso.
+5. Realizar las pruebas de acceso permitido y denegado.
+6. Completar la sección de evidencias y conclusiones.
 
 ---
 
