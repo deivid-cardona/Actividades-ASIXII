@@ -15,11 +15,11 @@ Profesor: Quim.
    - [4.5. Incidencia de plugins](#45-incidencia-de-plugins)
 5. [Despliegue y pruebas NFS](#5-despliegue-y-pruebas-nfs)
 6. [Inventario de evidencias](#6-inventario-de-evidencias)
-7. [Resultados y alcance](#7-resultados-y-alcance)
+7. [Conclusiones de la actividad](#7-conclusiones-de-la-actividad)
 
 ## 1. Objetivo
 
-Documentar la instalación, configuración e integración de FusionDirectory con OpenLDAP y la publicación de un recurso NFS con permisos asociados al grupo `desarrollo`. El manual diferencia los procedimientos documentados de las comprobaciones visibles en las capturas.
+Elaborar un manual de operaciones que permita administrar un entorno de usuarios y grupos centralizados con OpenLDAP mediante FusionDirectory y utilizar esas identidades para gestionar el acceso a un recurso compartido NFS. La práctica parte del servidor LDAP existente e incorpora la configuración de FusionDirectory, la preparación de los esquemas necesarios, la administración de grupos POSIX y el despliegue del recurso compartido. El manual recoge los procedimientos, los comandos de comprobación y la resolución de incidencias para que las operaciones puedan repetirse y verificarse, incluyendo las pruebas de acceso desde un cliente Windows.
 
 ## 2. Entorno
 
@@ -357,14 +357,13 @@ Las imágenes se encuentran en [evidencias/](evidencias/).
 | NFS 07 | Montaje en `N:` | [Ver](evidencias/nfs-07-montaje-cliente.png) |
 | NFS 08 | Escritura y lectura | [Ver](evidencias/nfs-08-acceso-permitido.png) |
 
-## 7. Resultados y alcance
+## 7. Conclusiones de la actividad
 
-- FusionDirectory permite administrar las ramas y grupos documentados.
-- A10 verifica los archivos de trabajo de esquemas en el servidor `ladapserver`.
-- A11 verifica las entradas de esquema cargadas en OpenLDAP, incluidos los cinco esquemas de configuración de plugins citados en la incidencia.
-- La secuencia NFS documenta publicación, montaje desde Windows y creación y lectura de `prueba.txt`.
+En esta actividad he incorporado FusionDirectory al entorno OpenLDAP para administrar el directorio desde una interfaz web. He configurado la rama de grupos POSIX, comprobado los grupos existentes y creado el grupo `soporte`. Durante la configuración aparecieron errores relacionados con los esquemas de los plugins, por lo que fue necesario preparar los archivos LDIF y cargar los esquemas correspondientes. La consulta final a OpenLDAP permite comprobar que esas entradas están presentes en la configuración del servidor.
 
-La identidad de prueba registrada en el manual es `dcardona`, con UID `20001` y GID `20000`. La prueba de escritura no acredita por sí sola el mapeo de esa identidad: el montaje mostrado utiliza `-o anon`. La verificación del mapeo y una prueba de acceso denegado a una identidad no autorizada deben documentarse por separado antes de dar por demostrada la segregación completa de acceso.
+En la parte de NFS he preparado el directorio `/srv/nfs/desarrollo`, asignado el grupo `desarrollo` y configurado los permisos y la exportación. Desde Windows he comprobado que el servidor publica el recurso, lo he montado en la unidad `N:` y he realizado una prueba de creación y lectura de archivos.
+
+La práctica relaciona dos aspectos de la administración de sistemas: la gestión centralizada de usuarios y grupos y la asignación de permisos sobre recursos compartidos. FusionDirectory facilita la administración de las identidades almacenadas en OpenLDAP, mientras que el recurso NFS permite trabajar sobre el acceso a los archivos. La prueba realizada confirma el funcionamiento del recurso desde el cliente; la comprobación del mapeo de identidad y del acceso denegado debe mantenerse como verificación pendiente, sin confundirla con la prueba de escritura ya completada.
 
 ---
 
