@@ -13,6 +13,7 @@ Profesor: Quim.
    - [4.3. Conversión a LDIF](#43-conversión-a-ldif)
    - [4.4. Verificación de esquemas cargados](#44-verificación-de-esquemas-cargados)
    - [4.5. Incidencia de plugins](#45-incidencia-de-plugins)
+   - [4.6. Verificación de identidades LDAP](#46-verificación-de-identidades-ldap)
 5. [Despliegue y pruebas NFS](#5-despliegue-y-pruebas-nfs)
 6. [Inventario de evidencias](#6-inventario-de-evidencias)
 7. [Conclusiones de la actividad](#7-conclusiones-de-la-actividad)
@@ -225,6 +226,10 @@ docker cp "fd-schema-source:/etc/ldap/schema/fusiondirectory/." ./all-fd-schemas
 
 Tras cargar los esquemas pendientes, se pudo guardar la configuración y administrar los grupos. La consulta del apartado 4.4 comprueba la presencia de los cinco esquemas de configuración de plugins implicados. La configuración de las ramas y la creación del grupo `soporte` se recogen en el apartado 3.
 
+### 4.6. Verificación de identidades LDAP
+
+![Verificación de identidades LDAP](evidencias/A12-verificacion-identidades-ldap.png)
+
 ## 5. Despliegue y pruebas NFS
 
 ### 5.1. Instalación
@@ -319,6 +324,10 @@ La salida muestra el archivo y el texto `Prueba de acceso NFS`.
 
 ![Creación y lectura del archivo de prueba](evidencias/nfs-08-acceso-permitido.png)
 
+### 5.9. Segregación de acceso NFS
+
+![Segregación de acceso NFS](evidencias/A13-segregacion-acceso-nfs.png)
+
 ## 6. Inventario de evidencias
 
 Las imágenes se encuentran en [evidencias/](evidencias/).
@@ -336,6 +345,8 @@ Las imágenes se encuentran en [evidencias/](evidencias/).
 | Docker | Consulta de contenedores | [Ver](evidencias/fusiondirectory-09-contenedores.png) |
 | A10 | Archivos de esquemas y LDIF en `ladapserver` | [Ver](evidencias/A10-esquemas-copiados.png) |
 | A11 | Esquemas cargados en OpenLDAP | [Ver](evidencias/A11-esquemas-cargados.png) |
+| A12 | Verificación de identidades LDAP | [Ver](evidencias/A12-verificacion-identidades-ldap.png) |
+| A13 | Segregación de acceso NFS | [Ver](evidencias/A13-segregacion-acceso-nfs.png) |
 | NFS 01 | Instalación | [Ver](evidencias/nfs-01-instalacion-servidor.png) |
 | NFS 02 | Creación del directorio | [Ver](evidencias/nfs-02-creacion-recurso.png) |
 | NFS 03 | Grupo y permisos | [Ver](evidencias/nfs-03-permisos-grupo.png) |
