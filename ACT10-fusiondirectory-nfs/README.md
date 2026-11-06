@@ -26,6 +26,8 @@ La actividad se desarrolla sobre la infraestructura previa de OpenLDAP, utilizan
 | Usuario administrador | `fd-admin` |
 | Grupos existentes | `desarrollo`, `usuarios` |
 | Grupo creado | `soporte` |
+| Recurso NFS | `/srv/nfs/desarrollo` |
+| Grupo autorizado NFS | `desarrollo` |
 
 ## 3. Avance ejecutado
 
@@ -232,7 +234,67 @@ El proceso general ha sido:
 
 Tras cargar los esquemas pendientes, he vuelto a la interfaz web y el guardado de la configuración de FusionDirectory se ha completado correctamente. A partir de ese momento, he podido configurar la rama de grupos POSIX y administrar los grupos del directorio.
 
-## 5. Evidencias actuales
+## 5. Módulo B — Despliegue de NFS
+
+### 5.1. Instalación del servidor NFS
+
+He instalado el paquete `nfs-kernel-server` en el servidor que publicará el recurso compartido.
+
+[Ver captura: instalación del servidor NFS](evidencias/nfs-01-instalacion-servidor.png)
+
+### 5.2. Creación del recurso compartido
+
+He creado el directorio que se utilizará como recurso NFS:
+
+```bash
+sudo mkdir -p /srv/nfs/desarrollo
+```
+
+[Ver captura: creación del recurso compartido](evidencias/nfs-02-creacion-recurso.png)
+
+### 5.3. Permisos y grupo autorizado
+
+He asignado el grupo `desarrollo` al recurso y he aplicado permisos `770`, de modo que el propietario y los miembros del grupo puedan acceder y escribir, mientras que el resto de usuarios no tenga acceso.
+
+```bash
+sudo chown root:desarrollo /srv/nfs/desarrollo
+sudo chmod 770 /srv/nfs/desarrollo
+```
+
+[Ver captura: permisos y grupo](evidencias/nfs-03-permisos-grupo.png)
+
+### 5.4. Exportación NFS
+
+He configurado la exportación del recurso en `/etc/exports`:
+
+```text
+/srv/nfs/desarrollo *(rw,sync,no_subtree_check)
+```
+
+Después he aplicado la configuración y he comprobado que el recurso está publicado:
+
+```bash
+sudo exportfs -ra
+sudo exportfs -v
+```
+
+La salida confirma que `/srv/nfs/desarrollo` está exportado con opciones de lectura y escritura, sincronización y comprobación de subárboles deshabilitada.
+
+[Ver captura: configuración de exportaciones](evidencias/nfs-04-configuracion-exports.png)
+
+### 5.5. Estado del servicio NFS
+
+He comprobado el estado del servicio NFS:
+
+```bash
+sudo systemctl status nfs-kernel-server --no-pager
+```
+
+El servicio aparece como activo. El estado `active (exited)` es normal para `nfs-server.service`, ya que se trata de un servicio de tipo *oneshot* que prepara las exportaciones y finaliza.
+
+[Ver captura: servicio NFS activo](evidencias/nfs-05-servicio-nfs-activo.png)
+
+## 6. Evidencias actuales
 
 Las capturas disponibles se encuentran en [`evidencias/`](evidencias/).
 
@@ -246,27 +308,30 @@ Las capturas disponibles se encuentran en [`evidencias/`](evidencias/).
 | Asistente | Inicio del asistente de configuración | [Ver captura](evidencias/fusiondirectory-inicio-asistente.png) |
 | Inspección inicial | Inspección inicial del directorio | [Ver captura](evidencias/fusiondirectory-inspeccion-inicial.png) |
 | Inspección final | Estado del directorio tras la inicialización | [Ver captura](evidencias/fusiondirectory-inspeccion-tras-inicializacion.png) |
+| NFS: instalación | Instalación del servidor NFS | [Ver captura](evidencias/nfs-01-instalacion-servidor.png) |
+| NFS: recurso | Creación de `/srv/nfs/desarrollo` | [Ver captura](evidencias/nfs-02-creacion-recurso.png) |
+| NFS: permisos | Grupo `desarrollo` y permisos `770` | [Ver captura](evidencias/nfs-03-permisos-grupo.png) |
+| NFS: exportación | Configuración y verificación de la exportación | [Ver captura](evidencias/nfs-04-configuracion-exports.png) |
+| NFS: servicio | Estado activo del servicio NFS | [Ver captura](evidencias/nfs-05-servicio-nfs-activo.png) |
 
-## 6. Evidencias pendientes
+## 7. Evidencias pendientes
 
 Este apartado queda reservado para las capturas y salidas que se añadirán en las siguientes fases de la actividad.
 
-### 6.1. NFS
+### 7.1. Cliente NFS
 
-- Instalación y configuración del servidor NFS.
-- Creación del recurso compartido.
-- Asignación de permisos POSIX al grupo autorizado.
-- Configuración del cliente.
-- Montaje del recurso NFS.
+- Comprobación de la exportación desde el cliente Windows.
+- Montaje del recurso NFS en una unidad de red.
+- Acceso al recurso desde el Explorador de archivos.
 
-### 6.2. Verificación de acceso
+### 7.2. Verificación de acceso
 
 - Reconocimiento de usuarios y grupos mediante `getent`.
 - Acceso permitido con un usuario miembro del grupo autorizado.
 - Acceso denegado con un usuario ajeno al grupo.
 - Comprobación de escritura dentro del recurso compartido.
 
-### 6.3. Comprobaciones finales
+### 7.3. Comprobaciones finales
 
 - Estado de los servicios OpenLDAP, NSS/SSSD y NFS.
 - Configuración final del recurso compartido.
@@ -274,14 +339,13 @@ Este apartado queda reservado para las capturas y salidas que se añadirán en l
 
 Las nuevas imágenes se añadirán en `evidencias/` con nombres descriptivos y se insertarán junto a la explicación correspondiente.
 
-## 7. Próximos pasos
+## 8. Próximos pasos
 
-1. Documentar el despliegue del servidor NFS.
-2. Crear y configurar el recurso compartido.
-3. Asignar permisos mediante un grupo LDAP.
-4. Configurar el cliente y montar el recurso.
-5. Realizar las pruebas de acceso permitido y denegado.
-6. Completar la sección de evidencias y conclusiones.
+1. Comprobar la exportación desde el cliente Windows.
+2. Montar el recurso NFS en una unidad de red.
+3. Realizar pruebas de acceso permitido y denegado.
+4. Documentar los permisos finales y el estado de los servicios.
+5. Completar la sección de evidencias y conclusiones.
 
 ---
 
