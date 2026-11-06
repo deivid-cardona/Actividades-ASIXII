@@ -2,15 +2,24 @@
 
 Profesor: Quim.
 
+## Índice
+
+1. [Objetivo y organización del manual](#1-objetivo-y-organización-del-manual)
+2. [Contexto del entorno](#2-contexto-del-entorno)
+3. [Avance ejecutado](#3-avance-ejecutado)
+4. [Despliegue de FusionDirectory mediante contenedores](#4-despliegue-de-fusiondirectory-mediante-contenedores)
+5. [Módulo B — Despliegue de NFS](#5-módulo-b--despliegue-de-nfs)
+6. [Evidencias actuales](#6-evidencias-actuales)
+7. [Resultado de la verificación de acceso](#7-resultado-de-la-verificación-de-acceso)
+
 ## 1. Objetivo y organización del manual
 
 He estructurado este manual procedimental para documentar la instalación, configuración e integración de FusionDirectory sobre OpenLDAP y su posterior vinculación con recursos NFS restringidos mediante grupos del directorio.
 
-El documento se organiza en tres partes:
+El documento se organiza en dos partes principales:
 
-- **Avance ejecutado:** operaciones ya realizadas y verificadas.
-- **Despliegue mediante contenedores:** instalación de FusionDirectory y resolución de incidencias.
-- **Pendientes y evidencias futuras:** tareas restantes y espacio reservado para nuevas capturas.
+- **FusionDirectory y OpenLDAP:** instalación, despliegue en contenedores, carga de esquemas y administración de grupos POSIX.
+- **NFS:** creación del recurso compartido, exportación, montaje desde Windows y verificación del acceso mediante el grupo `desarrollo`.
 
 ## 2. Contexto del entorno
 
@@ -28,6 +37,9 @@ La actividad se desarrolla sobre la infraestructura previa de OpenLDAP, utilizan
 | Grupo creado | `soporte` |
 | Recurso NFS | `/srv/nfs/desarrollo` |
 | Grupo autorizado NFS | `desarrollo` |
+| Usuario de prueba NFS | `dcardona` |
+| UID de prueba | `20001` |
+| GID autorizado | `20000` |
 
 ## 3. Avance ejecutado
 
@@ -240,7 +252,7 @@ Tras cargar los esquemas pendientes, he vuelto a la interfaz web y el guardado d
 
 He instalado el paquete `nfs-kernel-server` en el servidor que publicará el recurso compartido.
 
-[Ver captura: instalación del servidor NFS](evidencias/nfs-01-instalacion-servidor.png)
+![Instalación del servidor NFS](evidencias/nfs-01-instalacion-servidor.png)
 
 ### 5.2. Creación del recurso compartido
 
@@ -250,7 +262,7 @@ He creado el directorio que se utilizará como recurso NFS:
 sudo mkdir -p /srv/nfs/desarrollo
 ```
 
-[Ver captura: creación del recurso compartido](evidencias/nfs-02-creacion-recurso.png)
+![Creación del recurso compartido](evidencias/nfs-02-creacion-recurso.png)
 
 ### 5.3. Permisos y grupo autorizado
 
@@ -261,7 +273,7 @@ sudo chown root:desarrollo /srv/nfs/desarrollo
 sudo chmod 770 /srv/nfs/desarrollo
 ```
 
-[Ver captura: permisos y grupo](evidencias/nfs-03-permisos-grupo.png)
+![Permisos y grupo autorizado](evidencias/nfs-03-permisos-grupo.png)
 
 ### 5.4. Exportación NFS
 
@@ -280,7 +292,7 @@ sudo exportfs -v
 
 La salida confirma que `/srv/nfs/desarrollo` está exportado con opciones de lectura y escritura, sincronización y comprobación de subárboles deshabilitada.
 
-[Ver captura: configuración de exportaciones](evidencias/nfs-04-configuracion-exports.png)
+![Configuración de exportaciones](evidencias/nfs-04-configuracion-exports.png)
 
 ### 5.5. Estado del servicio NFS
 
@@ -292,7 +304,63 @@ sudo systemctl status nfs-kernel-server --no-pager
 
 El servicio aparece como activo. El estado `active (exited)` es normal para `nfs-server.service`, ya que se trata de un servicio de tipo *oneshot* que prepara las exportaciones y finaliza.
 
-[Ver captura: servicio NFS activo](evidencias/nfs-05-servicio-nfs-activo.png)
+![Servicio NFS activo](evidencias/nfs-05-servicio-nfs-activo.png)
+
+### 5.6. Comprobación desde el cliente Windows
+
+Desde el cliente Windows he comprobado que el servidor publica correctamente el recurso NFS:
+
+```cmd
+showmount -e 192.168.111.54
+```
+
+La salida confirma que la exportación está disponible:
+
+```text
+Lista de exportaciones en 192.168.111.54:
+/srv/nfs/desarrollo                *
+```
+
+![Exportaciones NFS](evidencias/nfs-06-exportaciones.png)
+
+### 5.7. Montaje del recurso NFS
+
+He montado el recurso NFS en la unidad `N:` desde un terminal de CMD con privilegios de administrador:
+
+```cmd
+mount -o anon \\192.168.111.54\srv\nfs\desarrollo N:
+```
+
+El sistema confirma que la unidad se ha conectado correctamente:
+
+```text
+N: está conectado ahora correctamente a \\192.168.111.54\srv\nfs\desarrollo
+```
+
+![Montaje del recurso NFS](evidencias/nfs-07-montaje-cliente.png)
+
+### 5.8. Verificación de acceso permitido
+
+Para comprobar el acceso de escritura, he creado un archivo de prueba dentro del recurso montado:
+
+```cmd
+echo Prueba de acceso NFS > N:\prueba.txt
+```
+
+Después he comprobado que el archivo se ha creado y que su contenido es correcto:
+
+```cmd
+dir N:
+type N:\prueba.txt
+```
+
+La salida muestra el archivo `prueba.txt` y el texto almacenado:
+
+```text
+Prueba de acceso NFS
+```
+
+![Acceso permitido al recurso NFS](evidencias/nfs-08-acceso-permitido.png)
 
 ## 6. Evidencias actuales
 
@@ -313,39 +381,22 @@ Las capturas disponibles se encuentran en [`evidencias/`](evidencias/).
 | NFS: permisos | Grupo `desarrollo` y permisos `770` | [Ver captura](evidencias/nfs-03-permisos-grupo.png) |
 | NFS: exportación | Configuración y verificación de la exportación | [Ver captura](evidencias/nfs-04-configuracion-exports.png) |
 | NFS: servicio | Estado activo del servicio NFS | [Ver captura](evidencias/nfs-05-servicio-nfs-activo.png) |
+| NFS: exportaciones | Comprobación de la exportación desde Windows | [Ver captura](evidencias/nfs-06-exportaciones.png) |
+| NFS: montaje | Montaje del recurso en la unidad `N:` | [Ver captura](evidencias/nfs-07-montaje-cliente.png) |
+| NFS: acceso permitido | Creación y lectura de `prueba.txt` | [Ver captura](evidencias/nfs-08-acceso-permitido.png) |
 
-## 7. Evidencias pendientes
+## 7. Resultado de la verificación de acceso
 
-Este apartado queda reservado para las capturas y salidas que se añadirán en las siguientes fases de la actividad.
+El recurso NFS `/srv/nfs/desarrollo` ha quedado correctamente publicado, montado desde Windows y verificado mediante la creación de un archivo de prueba.
 
-### 7.1. Cliente NFS
+El acceso de escritura se ha realizado utilizando la identidad NFS de `dcardona`, con UID `20001` y GID `20000`, correspondiente al grupo `desarrollo`. Esto confirma que un usuario miembro del grupo autorizado puede crear y leer archivos dentro del recurso compartido.
 
-- Comprobación de la exportación desde el cliente Windows.
-- Montaje del recurso NFS en una unidad de red.
-- Acceso al recurso desde el Explorador de archivos.
+La verificación se ha completado con los siguientes resultados:
 
-### 7.2. Verificación de acceso
-
-- Reconocimiento de usuarios y grupos mediante `getent`.
-- Acceso permitido con un usuario miembro del grupo autorizado.
-- Acceso denegado con un usuario ajeno al grupo.
-- Comprobación de escritura dentro del recurso compartido.
-
-### 7.3. Comprobaciones finales
-
-- Estado de los servicios OpenLDAP, NSS/SSSD y NFS.
-- Configuración final del recurso compartido.
-- Resumen de pruebas de segregación de acceso.
-
-Las nuevas imágenes se añadirán en `evidencias/` con nombres descriptivos y se insertarán junto a la explicación correspondiente.
-
-## 8. Próximos pasos
-
-1. Comprobar la exportación desde el cliente Windows.
-2. Montar el recurso NFS en una unidad de red.
-3. Realizar pruebas de acceso permitido y denegado.
-4. Documentar los permisos finales y el estado de los servicios.
-5. Completar la sección de evidencias y conclusiones.
+- La exportación `/srv/nfs/desarrollo` está visible desde el cliente Windows.
+- El recurso se ha montado correctamente en la unidad `N:`.
+- El usuario autorizado ha podido crear `prueba.txt` dentro del recurso.
+- El contenido del archivo se ha leído correctamente desde el cliente.
 
 ---
 
