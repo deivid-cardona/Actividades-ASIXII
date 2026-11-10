@@ -16,6 +16,8 @@ Repositorio de prácticas del ciclo formativo ASIXII.
 | ACT8 | Alina | DNS+Wireshark| [Ver práctica](./dns-wireshark/) |
 | ACT9 | Alina | Securización de servidores DNS con DNSSEC | [Ver práctica](./dnssec/) |
 | ACT10 | Quim | FusionDirectory, OpenLDAP y NFS | [Ver práctica](./ACT10-fusiondirectory-nfs/) |
+| ACT11 | Alina | Investigación: seguridad en el servicio DHCP | [Ver práctica](./ACT4-investiga-dhcp/README.md) |
+| ACT12 | Alina | Simulación de DHCP Starvation | [Ver práctica](./ACT5-ataques-dhcp/README.md) |
 
 Cada actividad incluye su código, capturas y documentación en su propia carpeta.
 
