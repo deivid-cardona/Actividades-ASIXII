@@ -1,9 +1,4 @@
-# ACT5 — Simulación DHCP Starvation
-
-**Módulo:** 037 — Seguridad en servicios  
-**Ciclo formativo:** ASIX  
-**Alumno:** Deivid Cardona  
-**Formato de entrega:** Informe documentado en GitBook personal.
+ Simulación DHCP Starvation
 
 ## 1. Introducción y estado de la práctica
 
