@@ -5,206 +5,192 @@
 **Alumno:** Deivid Cardona  
 **Formato de entrega:** Informe documentado en GitBook personal.
 
-> **Alcance:** esta actividad es independiente de ACT4. Aquí se documenta una práctica de laboratorio sobre agotamiento de direcciones DHCP y sus mitigaciones. Todas las pruebas se limitan a una red aislada propia en VirtualBox, con autorización y sin tráfico hacia redes externas.
+## 1. Introducción y estado de la práctica
 
-## Índice
+En esta actividad estudio el servicio DHCP y preparo un laboratorio para analizar el agotamiento de direcciones y sus mitigaciones. Hasta este momento he comprobado la asignación de una dirección al cliente legítimo, he capturado el proceso DORA, he comparado la MAC Ethernet con el campo `chaddr` y he configurado una limitación de tasa con nftables.
 
-1. [Introducción y objetivos](#1-introducción-y-objetivos)
-2. [Topología del laboratorio](#2-topología-del-laboratorio)
-3. [Comprobación inicial](#3-comprobación-inicial)
-4. [Práctica con Yersinia](#4-práctica-con-yersinia)
-5. [Práctica con Scapy](#5-práctica-con-scapy)
-6. [Validación del impacto](#6-validación-del-impacto)
-7. [Mitigaciones](#7-mitigaciones)
-8. [Prueba de las defensas](#8-prueba-de-las-defensas)
-9. [Preguntas de análisis](#9-preguntas-de-análisis)
-10. [Conclusiones](#10-conclusiones)
-11. [Capturas y evidencias](#11-capturas-y-evidencias)
-12. [Referencias](#12-referencias)
+Todavía no he realizado la simulación de agotamiento ni he demostrado la eficacia de la defensa frente a tráfico excesivo. Distingo en este informe los resultados comprobados de las tareas pendientes.
 
-## 1. Introducción y objetivos
+Cualquier simulación de denegación de servicio la limitaré a un laboratorio propio, aislado y autorizado. Antes de esa fase verificaré el modo de conexión y todos los adaptadores de las máquinas participantes en VirtualBox.
 
-En esta práctica voy a estudiar el impacto que puede tener el agotamiento del pool DHCP de una LAN y cómo se puede reducir el riesgo mediante controles de red y de host. Observaré el proceso DORA (Discover, Offer, Request, Acknowledge), la identificación del cliente mediante la dirección MAC Ethernet y el campo `chaddr` de BOOTP/DHCP, y los registros de concesiones del servidor.
+## 2. Topología y revisión de las máquinas
 
-Los objetivos son:
+He reutilizado las máquinas Debian 13 de las prácticas anteriores, sin borrar los archivos de BIND9. He revisado sus interfaces antes de continuar.
 
-- Comprender el intercambio de mensajes DHCP.
-- Observar en un entorno cerrado cómo una sucesión de identidades de cliente puede consumir concesiones del pool.
-- Analizar el tráfico y distinguir la MAC de la trama Ethernet del campo `chaddr` del mensaje DHCP.
-- Evaluar controles defensivos como DHCP Snooping, limitación de tasa y Port Security.
-- Registrar resultados y evidencias sin afectar redes ajenas.
+| Máquina | Interfaz | Dirección observada | Uso actual |
+|---|---|---|---|
+| Deivid | enp0s3 | 10.0.2.15/24 | Salida NAT |
+| Deivid | enp0s8 | 192.168.6.100/24 | Servidor DHCP del laboratorio |
+| dns2 | enp0s8 | 192.168.6.175/24 | Cliente DHCP legítimo |
 
-**Importante:** el agotamiento de un pool es una denegación de servicio. No ejecutar pruebas de inundación fuera de un laboratorio aislado ni contra sistemas sin autorización expresa.
+He guardado la configuración de VirtualBox como evidencia de la topología de estas dos máquinas. Tener direcciones en la misma subred no demuestra por sí solo el aislamiento: debo comprobar también el modo y nombre de la red virtual. La incorporación y revisión de Kali como tercer equipo de pruebas sigue pendiente.
 
-## 2. Topología del laboratorio
+![Configuración de VirtualBox de Deivid y dns2](evidencias/01-topologia-virtualbox-deivid-dns2.png)
 
-La topología indicada para la práctica contiene tres máquinas virtuales conectadas a la misma **Red Interna** de VirtualBox:
-
-| VM | Función | Adaptadores |
-|---|---|---|
-| Kali Linux | Equipo de pruebas | Red Interna |
-| Debian/Ubuntu Server | Servidor DHCP (ISC DHCP Server o Kea) | NAT para administración/descargas y Red Interna para el laboratorio |
-| Ubuntu/Debian Client | Cliente DHCP legítimo | Red Interna |
-
-Configurar el nombre de la Red Interna igual en las tres máquinas. En los adaptadores conectados a esa red, revisar la política de modo promiscuo según las necesidades de observación del laboratorio. No conectar la interfaz de laboratorio a una red puenteada o a la LAN real.
-
-> **Evidencia pendiente:** captura de la configuración de VirtualBox que muestre la Red Interna y los adaptadores de cada VM, ocultando datos ajenos al laboratorio.
-
-### Preparación del servidor
-
-El servidor DHCP debe tener una interfaz conectada a la Red Interna y un pool pequeño, reservado exclusivamente para la práctica. Antes de comenzar, anotar el nombre de la interfaz de laboratorio, la subred y el rango configurado. No reutilizar configuraciones de una red real.
-
-El servidor debe estar instalado y configurado previamente, tal como pide el enunciado. Confirmar el estado del servicio y revisar su configuración antes de iniciar cualquier prueba:
+Para revisar las interfaces he utilizado:
 
 ```bash
-sudo systemctl status isc-dhcp-server
+hostnamectl
+ip -br address
+ip -br link
+ip route
+```
+
+En la actividad anterior dns2 utilizaba 192.168.6.101 como DNS secundario. Ahora obtiene 192.168.6.175 por DHCP. Antes de volver a demostrar aquella práctica revisaré y recuperaré el direccionamiento y las comprobaciones de BIND9 correspondientes; no doy por verificada su continuidad solo por conservar los archivos.
+
+## 3. Identificación del servidor y concesión inicial
+
+Primero intenté consultar isc-dhcp-server, pero el servicio y sus archivos no existían. Después comprobé el puerto UDP 67 e identifiqué que el servidor DHCP instalado era dnsmasq.
+
+```bash
+sudo ss -lntup | grep -E ':67|:68'
+sudo systemctl status dnsmasq --no-pager -l
+sudo cat /var/lib/misc/dnsmasq.leases
+```
+
+He confirmado que dnsmasq escucha exclusivamente en enp0s8, tiene el servicio DNS desactivado y ofrece el rango 192.168.6.150–192.168.6.180, con concesiones de una hora. En el archivo de concesiones aparece dns2 con la MAC 08:00:27:eb:d2:36 y la dirección 192.168.6.175.
+
+![Servicio dnsmasq y concesión inicial](evidencias/02-concesion-inicial-dhcp.png)
+
+Mi implementación utiliza dnsmasq, aunque la topología de referencia del informe proponía ISC DHCP Server o Kea. Si el enunciado original exige uno de esos servicios, tendré que validar esta adaptación con el docente.
+
+## 4. Captura del intercambio DORA
+
+He iniciado una captura con Wireshark en enp0s8 de Deivid y he filtrado el tráfico DHCP. En dns2 he liberado y solicitado la concesión utilizando dhclient, después de disponer del cliente instalado.
+
+```bash
+sudo dhclient -r enp0s8
+sudo dhclient -v enp0s8
 ip -br address
 ```
 
-Los nombres de interfaces y rutas de los ficheros de concesiones varían entre distribuciones y versiones. Confirmarlos en la máquina antes de utilizar comandos de comprobación.
+En Wireshark he observado los mensajes Discover, Offer, Request y ACK. Así he relacionado la solicitud del cliente con la oferta y confirmación del servidor 192.168.6.100.
 
-## 3. Comprobación inicial
+![Intercambio DORA en Wireshark](evidencias/03-dora-wireshark.png)
 
-Primero comprobaré que el servicio asigna correctamente una dirección al cliente legítimo y que el cliente puede renovarla. En la máquina cliente, identificar la interfaz correcta con `ip -br link`; el enunciado utiliza `enp0s3` como ejemplo, pero el nombre puede variar.
+## 5. Comparación de la MAC Ethernet y chaddr
 
-```bash
-sudo dhclient -v enp0s3
-ip -br address
-```
+He seleccionado el DHCP Discover y he desplegado Ethernet II y DHCP. He comparado la MAC de origen de la trama con el campo Client MAC address, correspondiente a chaddr.
 
-En el servidor revisaré el fichero de concesiones indicado por la instalación. En ISC DHCP suele ser `/var/lib/dhcp/dhcpd.leases`:
+| Campo observado | Valor |
+|---|---|
+| MAC de origen Ethernet | 08:00:27:eb:d2:36 |
+| Client MAC address / chaddr | 08:00:27:eb:d2:36 |
 
-```bash
-sudo tail -n 40 /var/lib/dhcp/dhcpd.leases
-```
+En este paquete ambos valores coinciden. Esta captura documenta un cliente legítimo; no demuestra una suplantación ni una prueba ejecutada con Scapy.
 
-Anotaré la IP asignada, la MAC del cliente, la hora y el estado del servicio. Para observar el intercambio DORA se puede capturar únicamente la interfaz interna del laboratorio con Wireshark y utilizar el filtro de visualización `dhcp` o `bootp`.
+![Comparación de Ethernet y chaddr](evidencias/04-ethernet-chaddr.png)
 
-> **Evidencia pendiente:** concesión inicial en el servidor y captura de DORA del cliente legítimo.
+## 6. Estado inicial del pool
 
-## 4. Práctica con Yersinia
-
-Yersinia puede utilizarse en laboratorio para estudiar protocolos de capa 2, incluido DHCP. El enunciado propone su modo interactivo (`-I`) o gráfico (`-G`) y la selección de DHCP y de una opción de envío de solicitudes.
-
-Antes de iniciar, confirmar que Kali está conectada únicamente a la Red Interna y que el servidor usa un pool de laboratorio pequeño. Realizar la prueba únicamente durante el intervalo y con los límites autorizados por el docente; detenerla inmediatamente si el tráfico sale del laboratorio o afecta a otra máquina.
-
-La observación debe centrarse en el patrón de solicitudes, las identidades declaradas y los cambios en el estado del pool, no en lanzar tráfico contra una red real. El nombre de teclas y opciones puede variar por versión; seguir la documentación de la versión instalada y las instrucciones del profesor.
-
-> **Evidencia pendiente:** captura de Yersinia mostrando la selección de protocolo/función en el laboratorio, sin datos de redes reales.
-
-## 5. Práctica con Scapy
-
-El enunciado plantea analizar un script de Scapy que genera mensajes DHCP Discover con identidades de cliente variables. Como este tipo de código puede provocar una denegación de servicio si se ejecuta en una red compartida, no incluyo aquí un bucle de inundación ni instrucciones para acelerar o ampliar el ataque.
-
-Para documentar el concepto de forma segura, estudiaré en una captura controlada un único intercambio DHCP generado por un cliente legítimo y compararé:
-
-- La dirección MAC de origen de la trama Ethernet.
-- El campo `chaddr` dentro del mensaje BOOTP/DHCP.
-- El tipo de mensaje DHCP y el identificador de transacción.
-
-Si el docente requiere la demostración de agotamiento, debe proporcionarse un entorno efímero e aislado y parámetros de ejecución limitados. La prueba se realizará bajo supervisión, con un mecanismo de parada y recuperación del servicio y sin conexión a redes externas.
-
-> **Evidencia pendiente:** captura de Wireshark con Ethernet y BOOTP/DHCP expandidos para comparar origen L2 y `chaddr`.
-
-## 6. Validación del impacto
-
-Tras la demostración autorizada, comprobaré desde el servidor cuántas concesiones existen y si el pool conserva direcciones disponibles. En ISC DHCP, revisar el fichero de leases y los registros del servicio; no asumir que contar líneas equivale siempre al número de concesiones activas, porque el fichero puede guardar estados históricos.
-
-En el cliente legítimo, liberar y solicitar de nuevo una concesión solo si el docente ha confirmado que el laboratorio está preparado y que no se afectará a otros servicios:
+Antes de la simulación he documentado el rango configurado y las concesiones del servidor.
 
 ```bash
-sudo dhclient -r enp0s3
-sudo dhclient -v enp0s3
+date
+sudo grep -nE '^[[:space:]]*(interface=|dhcp-range=)' /etc/dnsmasq.conf
+sudo cat /var/lib/misc/dnsmasq.leases
 ```
 
-Registraré el resultado: asignación normal, ausencia de oferta, mensaje de pool agotado o dirección de autoconfiguración si el sistema la utiliza. Un fallo de DHCP, por sí solo, no demuestra que exista un ataque; también puede deberse a errores de configuración, servicio detenido, interfaz incorrecta o problemas de conectividad.
+El rango configurado contiene 31 direcciones, desde .150 hasta .180, ambas incluidas. En la comprobación compartida aparece la concesión de dns2. Esta evidencia corresponde al estado previo, no a un pool agotado.
 
-> **Evidencia pendiente:** estado del pool y resultado de la solicitud del cliente, antes y después, en la red aislada.
+![Pool y concesiones antes de la simulación](evidencias/05a-pool-leases-antes.png)
 
-## 7. Mitigaciones
+Pendiente: comparar este estado con el observado durante o después de la demostración autorizada y registrar el resultado del cliente legítimo.
 
-### DHCP Snooping
+## 7. Mitigación configurada con nftables
 
-DHCP Snooping es una función de switches gestionables que distingue puertos confiables (hacia el servidor/relay autorizado) de puertos no confiables (acceso de clientes). En general, filtra mensajes de servidor DHCP recibidos por puertos no confiables y puede mantener una tabla de bindings. La configuración exacta depende del fabricante y modelo.
+Al revisar el firewall he encontrado la tabla ip act8_nat con una regla masquerade para la salida de 192.168.6.0/24 por enp0s3. He conservado esa configuración y he añadido una tabla netdev independiente llamada act5_dhcp.
 
-Debe habilitarse cuidadosamente en la VLAN correspondiente, marcar como trusted únicamente el enlace legítimo hacia el servidor DHCP y verificar el funcionamiento de clientes y relays. Una asignación incorrecta de puertos confiables puede interrumpir el servicio.
+Antes del cambio he guardado las reglas:
 
-### Port Security y límites de tasa
+```bash
+sudo nft list ruleset | tee ~/nft-antes-mitigacion-dhcp.txt
+```
 
-Port Security puede restringir cuántas direcciones MAC se aprenden en un puerto de acceso y generar acciones ante excesos. El límite debe ajustarse a la realidad del puerto (por ejemplo, teléfonos IP, puntos de acceso o hipervisores pueden necesitar más de una MAC).
+Los comandos que he utilizado para crear la mitigación son los siguientes. No debo repetirlos si la tabla y las reglas ya existen.
 
-También se pueden aplicar límites de tasa de mensajes DHCP en los puertos de acceso, cuando el switch lo soporta. Estas medidas actúan cerca del origen y suelen ser más apropiadas que depender únicamente de un filtro en el servidor.
+```bash
+sudo nft add table netdev act5_dhcp
+sudo nft 'add chain netdev act5_dhcp entrada { type filter hook ingress device "enp0s8" priority -500; policy accept; }'
+sudo nft 'add rule netdev act5_dhcp entrada ether type ip ip protocol udp udp dport 67 limit rate over 10/second burst 20 packets counter drop'
+sudo nft 'add rule netdev act5_dhcp entrada ether type ip ip protocol udp udp dport 67 counter'
+```
 
-### Linux e iptables
+He configurado un límite global para DHCPv4 dirigido al puerto UDP 67 de enp0s8: 10 paquetes por segundo, con ráfaga de 20. La primera regla cuenta y descarta el exceso; la segunda cuenta el tráfico que no ha sido descartado por ella. No es un límite por cliente ni una garantía frente a todo agotamiento: solicitudes sostenidas por debajo del umbral también podrían consumir concesiones.
 
-El enunciado propone `hashlimit` para limitar tráfico dirigido al puerto UDP 67. Es importante entender sus límites: una regla de firewall debe ubicarse en la interfaz y cadena correctas, y un límite por MAC/IP puede ser evadido si el identificador puede falsificarse. Además, las reglas no reemplazan DHCP Snooping ni controles de acceso de capa 2.
+```bash
+sudo nft list table netdev act5_dhcp
+sudo nft list table ip act8_nat
+```
 
-La sintaxis concreta depende de la versión de iptables y de los módulos disponibles. Antes de aplicar reglas en un servidor, validar en una máquina de laboratorio, conservar una vía de administración alternativa y comprobar los contadores y el servicio. Evitar copiar reglas a un servidor de producción sin revisión.
+![Mitigación DHCP y conservación de la tabla NAT](evidencias/06-mitigacion-dhcp.png)
 
-### Validación del campo `chaddr`
+No he configurado todavía la persistencia tras reiniciar. Si necesito retirar únicamente esta mitigación, utilizaré `sudo nft delete table netdev act5_dhcp`, sin vaciar el conjunto completo de reglas.
 
-No debe asumirse que `deny unknown-clients;` en ISC DHCP valida la coincidencia entre la MAC Ethernet de origen y `chaddr`: esa directiva controla clientes no declarados según la configuración, y no equivale por sí sola a inspección de capa 2.
+Como medidas teóricas complementarias estudio DHCP Snooping, Port Security y los límites por puerto en switches compatibles. No he implementado esas funciones en este laboratorio ni he configurado una comparación automática entre la MAC Ethernet y chaddr.
 
-La validación de correspondencia L2/L7 requiere un mecanismo que pueda inspeccionar ambos campos, por ejemplo una función del switch, bridge o sistema de filtrado compatible. Verificar compatibilidad y sintaxis con la documentación de la versión instalada antes de proponer una regla.
+## 8. Comprobación del cliente después de configurar la defensa
 
-## 8. Prueba de las defensas
+Con las reglas instaladas he vuelto a liberar y solicitar la concesión desde dns2. He observado Discover, Offer, Request y ACK, y el cliente ha quedado con 192.168.6.175/24.
 
-Para evaluar una mitigación en el laboratorio:
+![Renovación correcta del cliente legítimo](evidencias/07-cliente-legitimo.png)
 
-1. Guardar la configuración inicial y confirmar que existe una ruta de recuperación.
-2. Habilitar una sola defensa por vez (por ejemplo, DHCP Snooping en el switch virtual/gestionable, o una política de tasa en el entorno aislado).
-3. Verificar que el cliente legítimo obtiene una concesión normal.
-4. Observar registros, contadores y tabla de leases durante la prueba aprobada.
-5. Confirmar que la defensa reduce las solicitudes anómalas sin bloquear clientes legítimos.
-6. Restaurar el estado del laboratorio y documentar los cambios.
+Después he revisado en Deivid:
 
-No borrar a mano el fichero de leases mientras el servicio está activo ni reiniciar el servicio de forma destructiva sin seguir el procedimiento de recuperación del laboratorio y la documentación del servidor DHCP.
+```bash
+sudo nft list table netdev act5_dhcp
+sudo cat /var/lib/misc/dnsmasq.leases
+```
 
-> **Evidencia pendiente:** regla/ajuste defensivo, contadores antes y después y prueba exitosa del cliente legítimo.
+En la comprobación he obtenido estos resultados:
 
-## 9. Preguntas de análisis
+| Elemento | Resultado observado |
+|---|---|
+| Contador de descarte | 0 paquetes, 0 bytes |
+| Segunda regla DHCP | 4 paquetes, 1313 bytes |
+| Concesión | dns2, 192.168.6.175 |
+| MAC del cliente | 08:00:27:eb:d2:36 |
 
-### ¿Por qué se deben comparar la MAC Ethernet y `chaddr`?
+![Contadores y concesión comprobados en el servidor](evidencias/07b-contadores-concesion-servidor.png)
 
-La MAC Ethernet pertenece a la cabecera de capa 2 y `chaddr` es un dato del mensaje BOOTP/DHCP. Analizar ambos ayuda a detectar inconsistencias y a entender cómo el servidor identifica al cliente. Si solo cambia uno, los controles que inspeccionan el otro pueden observar una identidad repetida o discrepante; la respuesta exacta depende del servidor y de la infraestructura.
+He comprobado que el cliente obtiene su dirección con la mitigación configurada y que no se han registrado descartes en esa comprobación. Todavía no he demostrado que el límite descarte tráfico excesivo ni que evite el agotamiento del pool.
 
-### ¿Qué papel tiene el modo promiscuo en VirtualBox?
+## 9. Pruebas pendientes con Yersinia y Scapy
 
-El modo promiscuo afecta a qué tramas puede recibir/observar una interfaz virtual. No sustituye el aislamiento de red ni es una defensa contra el agotamiento. La visibilidad depende de la topología, del tipo de red virtual y de la configuración del hipervisor; debe probarse solo en la Red Interna del laboratorio.
+Todavía no he realizado ni documentado una prueba con Yersinia o Scapy. La inspección del Discover del cliente legítimo no sustituye esas partes de la actividad.
 
-### ¿Cómo podría ayudar un bridge Linux?
+Antes de continuar, verificaré el tercer equipo y el aislamiento del laboratorio, guardaré el estado inicial y acordaré los límites de la demostración autorizada. Documentaré los cambios en concesiones, la respuesta del cliente y los contadores, diferenciando la prueba sin defensa de la prueba con defensa. Finalmente recuperaré el servicio y comprobaré su funcionamiento.
 
-Un bridge permite aplicar controles de capa 2 al tráfico que atraviesa sus puertos. Para validar que la MAC Ethernet coincide con `chaddr`, se necesita una función capaz de inspeccionar el contenido DHCP y comparar ambos valores; no conviene inventar una regla genérica de `ebtables` sin verificar que la herramienta y versión soporten esa inspección.
+## 10. Análisis y conclusiones provisionales
 
-### ¿Qué limitación tiene un límite por MAC de origen?
+He relacionado el proceso DORA con una concesión real y he observado por separado la MAC de Ethernet y chaddr. He identificado dnsmasq como servicio DHCP existente, evitando instalar otro servidor sin revisar previamente la máquina.
 
-Un límite agrupado por MAC puede ser menos eficaz si la identidad L2 se falsifica o si hay muchos clientes detrás de un mismo enlace. En switches gestionables se complementa con DHCP Snooping, límites de tasa por puerto, Port Security, autenticación de acceso (por ejemplo, 802.1X cuando corresponda) y monitorización.
+He conservado la regla NAT anterior y he añadido una limitación de tasa independiente. La renovación normal ha funcionado tras el cambio. Sin embargo, todavía no puedo concluir que haya demostrado DHCP Starvation ni una mitigación eficaz contra él: esas verificaciones siguen pendientes.
 
-## 10. Conclusiones
+El modo promiscuo afecta a la observación del tráfico, pero no sustituye el aislamiento. Un bridge con inspección compatible podría permitir controles adicionales de capa 2; no he implementado esa solución. Tampoco confundo una lista de clientes permitidos con una validación de correspondencia entre Ethernet y chaddr.
 
-La práctica permite relacionar el proceso DORA con el uso de leases y comprender por qué un pool limitado puede afectar a nuevos clientes si se consumen sus direcciones. La inspección conjunta de la trama Ethernet, `chaddr`, logs del servidor y tabla de concesiones aporta más información que observar únicamente la dirección IP del cliente.
-
-La defensa debe aplicarse en varias capas: controles de switch como DHCP Snooping y Port Security, limitación de tasa, configuración correcta del servidor y monitorización. Los controles deben verificarse con un cliente legítimo para evitar que la mitigación provoque una interrupción del servicio.
-
-## 11. Capturas y evidencias
-
-Guardar aquí las capturas del laboratorio o añadirlas en esta carpeta si se crea posteriormente. No incluir credenciales, datos personales ni tráfico de redes reales.
+## 11. Resumen de evidencias
 
 | Nº | Evidencia | Estado |
-|---:|---|---|
-| 1 | Topología y adaptadores de VirtualBox en Red Interna | Pendiente |
-| 2 | Concesión DHCP inicial del cliente legítimo | Pendiente |
-| 3 | Intercambio DORA observado con Wireshark | Pendiente |
-| 4 | Campos Ethernet y `chaddr` del paquete | Pendiente |
-| 5 | Estado del pool/leases durante la prueba | Pendiente |
-| 6 | Mitigación aplicada y contadores | Pendiente |
-| 7 | Cliente legítimo funcionando tras la mitigación | Pendiente |
+|---|---|---|
+| 1 | Topología de Deivid y dns2 | Captura incorporada; tercer equipo pendiente |
+| 2 | Concesión inicial | Incorporada |
+| 3 | Intercambio DORA | Incorporada |
+| 4 | MAC Ethernet y chaddr | Incorporada |
+| 5a | Pool antes de la simulación | Incorporada |
+| 5b | Pool durante/después y efecto del agotamiento | Pendiente |
+| 6 | Mitigación configurada | Incorporada; eficacia ante exceso pendiente |
+| 7 | Cliente legítimo después de configurar la defensa | Incorporada |
+| 7b | Contadores y concesión del servidor | Incorporada |
+| — | Prácticas con Yersinia y Scapy | Pendientes |
 
 ## 12. Referencias
 
 - [Scapy — documentación oficial](https://scapy.readthedocs.io/)
-- [Kali Linux — herramienta Scapy](https://www.kali.org/tools/scapy/)
-- [RFC 2131 — Dynamic Host Configuration Protocol](https://www.rfc-editor.org/rfc/rfc2131)
+- [Kali Linux — Scapy](https://www.kali.org/tools/scapy/)
+- [dnsmasq — manual](https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html)
+- [nftables — manual en Debian 13](https://manpages.debian.org/trixie/nftables/nft.8.en.html)
+- [RFC 2131 — DHCP](https://www.rfc-editor.org/rfc/rfc2131)
 - [RFC 3118 — Authentication for DHCP Messages](https://www.rfc-editor.org/rfc/rfc3118)
 
 ---
