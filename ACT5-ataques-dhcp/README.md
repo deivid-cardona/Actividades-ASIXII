@@ -1,4 +1,4 @@
- Simulación DHCP Starvation
+## Simulación DHCP Starvation
 
 ## 1. Introducción y estado de la práctica
 
