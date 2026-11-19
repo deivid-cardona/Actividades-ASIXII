@@ -166,18 +166,18 @@ El modo promiscuo afecta a la observación del tráfico, pero no sustituye el ai
 
 ## 11. Resumen de evidencias
 
-| Nº | Evidencia | Estado |
-|---|---|---|
-| 1 | Topología de Deivid y dns2 | Captura incorporada; tercer equipo pendiente |
-| 2 | Concesión inicial | Incorporada |
-| 3 | Intercambio DORA | Incorporada |
-| 4 | MAC Ethernet y chaddr | Incorporada |
-| 5a | Pool antes de la simulación | Incorporada |
-| 5b | Pool durante/después y efecto del agotamiento | Pendiente |
-| 6 | Mitigación configurada | Incorporada; eficacia ante exceso pendiente |
-| 7 | Cliente legítimo después de configurar la defensa | Incorporada |
-| 7b | Contadores y concesión del servidor | Incorporada |
-| — | Prácticas con Yersinia y Scapy | Pendientes |
+| Nº | Evidencia | Estado | Captura |
+|---|---|---|---|
+| 1 | Topología de Deivid y dns2 | Captura incorporada; tercer equipo pendiente | [Ver evidencia](evidencias/01-topologia-virtualbox-deivid-dns2.png) |
+| 2 | Concesión inicial | Incorporada | [Ver evidencia](evidencias/02-concesion-inicial-dhcp.png) |
+| 3 | Intercambio DORA | Incorporada | [Ver evidencia](evidencias/03-dora-wireshark.png) |
+| 4 | MAC Ethernet y chaddr | Incorporada | [Ver evidencia](evidencias/04-ethernet-chaddr.png) |
+| 5a | Pool antes de la simulación | Incorporada | [Ver evidencia](evidencias/05a-pool-leases-antes.png) |
+| 5b | Pool durante/después y efecto del agotamiento | Pendiente | — |
+| 6 | Mitigación configurada | Incorporada; eficacia ante exceso pendiente | [Ver evidencia](evidencias/06-mitigacion-dhcp.png) |
+| 7 | Cliente legítimo después de configurar la defensa | Incorporada | [Ver evidencia](evidencias/07-cliente-legitimo.png) |
+| 7b | Contadores y concesión del servidor | Incorporada | [Ver evidencia](evidencias/07b-contadores-concesion-servidor.png) |
+| — | Prácticas con Yersinia y Scapy | Pendientes | — |
 
 ## 12. Referencias
 
